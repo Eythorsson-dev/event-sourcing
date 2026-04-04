@@ -25,7 +25,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **PROJ-03**: Projections support nested lists and objects in output shape
 - [ ] **PROJ-04**: `ProjectionDefinition` struct serializes to/from JSON
 - [ ] **PROJ-05**: Single projection engine used for both read models and constraint validation
-- [ ] **PROJ-06**: Builder API for constructing `ProjectionDefinition` programmatically
+- [ ] **PROJ-06**: Builder API for constructing `ProjectionDefinition` using generic types and lambda-based field mapping (not string-based references)
 
 ### Constraints
 
@@ -92,37 +92,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| LOG-01 | Pending | Pending |
-| LOG-02 | Pending | Pending |
-| LOG-03 | Pending | Pending |
-| LOG-04 | Pending | Pending |
-| LOG-05 | Pending | Pending |
-| LOG-06 | Pending | Pending |
-| LOG-07 | Pending | Pending |
-| LOG-08 | Pending | Pending |
-| PROJ-01 | Pending | Pending |
-| PROJ-02 | Pending | Pending |
-| PROJ-03 | Pending | Pending |
-| PROJ-04 | Pending | Pending |
-| PROJ-05 | Pending | Pending |
-| PROJ-06 | Pending | Pending |
-| CONS-01 | Pending | Pending |
-| CONS-02 | Pending | Pending |
-| CONS-03 | Pending | Pending |
-| OBSV-01 | Pending | Pending |
-| OBSV-02 | Pending | Pending |
-| OBSV-03 | Pending | Pending |
-| OBSV-04 | Pending | Pending |
-| STOR-01 | Pending | Pending |
-| STOR-02 | Pending | Pending |
-| STOR-03 | Pending | Pending |
-| CMD-01 | Pending | Pending |
+| LOG-01 | Phase 1 | Pending |
+| LOG-02 | Phase 1 | Pending |
+| LOG-03 | Phase 1 | Pending |
+| LOG-04 | Phase 3 | Pending |
+| LOG-05 | Phase 3 | Pending |
+| LOG-06 | Phase 3 | Pending |
+| LOG-07 | Phase 1 | Pending |
+| LOG-08 | Phase 5 | Pending |
+| PROJ-01 | Phase 4 | Pending |
+| PROJ-02 | Phase 5 | Pending |
+| PROJ-03 | Phase 4 | Pending |
+| PROJ-04 | Phase 4 | Pending |
+| PROJ-05 | Phase 5 | Pending |
+| PROJ-06 | Phase 4 | Pending |
+| CONS-01 | Phase 6 | Pending |
+| CONS-02 | Phase 6 | Pending |
+| CONS-03 | Phase 6 | Pending |
+| OBSV-01 | Phase 7 | Pending |
+| OBSV-02 | Phase 7 | Pending |
+| OBSV-03 | Phase 7 | Pending |
+| OBSV-04 | Phase 7 | Pending |
+| STOR-01 | Phase 1 | Pending |
+| STOR-02 | Phase 2 | Pending |
+| STOR-03 | Phase 8 | Pending |
+| CMD-01 | Phase 9 | Pending |
 
 **Coverage:**
 - v1 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-04*
-*Last updated: 2026-04-04 after initial definition*
+*Last updated: 2026-04-04 after roadmap creation — all 25 requirements mapped*
