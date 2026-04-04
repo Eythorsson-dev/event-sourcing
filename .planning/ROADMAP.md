@@ -2,7 +2,7 @@
 
 **Milestone:** v1
 **Granularity:** Fine
-**Coverage:** 25/25 requirements mapped
+**Coverage:** 27/27 requirements mapped
 **Created:** 2026-04-04
 
 ---
@@ -60,9 +60,9 @@
 **Plans**: TBD
 
 ### Phase 4: Projection Engine — Single-Stream
-**Goal**: A caller can describe a single-stream projection as a serializable definition, run it over a stored stream, and get back a typed result — with the definition round-trippable to and from JSON
+**Goal**: A caller can describe a single-stream projection using a DSL macro that generates the read model struct, Projection trait impl, and JSON-serializable definition — then run it over a stored stream and get back a typed result
 **Depends on**: Phase 3
-**Requirements**: PROJ-01, PROJ-03, PROJ-04, PROJ-06
+**Requirements**: PROJ-01, PROJ-03, PROJ-04, PROJ-06, PROJ-07, PROJ-08
 **Success Criteria** (what must be TRUE):
   1. A caller constructs a `ProjectionDefinition` via a builder API without writing raw struct literals
   2. A `ProjectionDefinition` serializes to JSON and deserializes back to an equivalent struct without data loss
@@ -167,6 +167,8 @@
 | PROJ-04 | Phase 4 |
 | PROJ-05 | Phase 5 |
 | PROJ-06 | Phase 4 |
+| PROJ-07 | Phase 4 |
+| PROJ-08 | Phase 4 |
 | CONS-01 | Phase 6 |
 | CONS-02 | Phase 6 |
 | CONS-03 | Phase 6 |
@@ -179,7 +181,7 @@
 | STOR-03 | Phase 8 |
 | CMD-01 | Phase 9 |
 
-**Total:** 25/25 mapped
+**Total:** 27/27 mapped
 
 ---
 *Created: 2026-04-04*

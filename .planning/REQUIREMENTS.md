@@ -25,7 +25,9 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **PROJ-03**: Projections support nested lists and objects in output shape
 - [ ] **PROJ-04**: `ProjectionDefinition` struct serializes to/from JSON
 - [ ] **PROJ-05**: Single projection engine used for both read models and constraint validation
-- [ ] **PROJ-06**: Builder API for constructing `ProjectionDefinition` using generic types and lambda-based field mapping (not string-based references)
+- [ ] **PROJ-06**: Builder API for constructing `ProjectionDefinition` programmatically (internal engine, used by macro and directly by advanced users)
+- [ ] **PROJ-07**: `projection!` DSL macro that generates read model struct, `Projection` trait impl, and `ProjectionDefinition` — the primary user-facing interface
+- [ ] **PROJ-08**: Proc-macro crate (`event-sourcing-macros`) with human-readable compile errors for the DSL
 
 ### Constraints
 
@@ -56,8 +58,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ### Projection Macros
 
-- **MACRO-01**: Derive/attribute macro for defining projections declaratively — converts to `ProjectionDefinition` internally
-- **MACRO-02**: Proc-macro crate (`event-sourcing-macros`) with human-readable compile errors
+(Moved to v1 — PROJ-07, PROJ-08)
 
 ### Query Language
 
@@ -106,6 +107,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PROJ-04 | Phase 4 | Pending |
 | PROJ-05 | Phase 5 | Pending |
 | PROJ-06 | Phase 4 | Pending |
+| PROJ-07 | Phase 4 | Pending |
+| PROJ-08 | Phase 4 | Pending |
 | CONS-01 | Phase 6 | Pending |
 | CONS-02 | Phase 6 | Pending |
 | CONS-03 | Phase 6 | Pending |
@@ -119,8 +122,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CMD-01 | Phase 9 | Pending |
 
 **Coverage:**
-- v1 requirements: 25 total
-- Mapped to phases: 25
+- v1 requirements: 27 total
+- Mapped to phases: 27
 - Unmapped: 0
 
 ---
