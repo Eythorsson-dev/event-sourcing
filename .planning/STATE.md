@@ -1,7 +1,7 @@
 # Project State: Event Sourcing
 
-**Last updated:** 2026-04-04
-**Updated by:** roadmapper (initial creation)
+**Last updated:** 2026-04-05
+**Updated by:** planner (Phase 1 plan created)
 
 ---
 
@@ -19,8 +19,8 @@
 |-------|-------|
 | Phase | 1 |
 | Phase Name | Workspace Setup and Core Types |
-| Plan | None (not yet planned) |
-| Status | Not started |
+| Plan | 01-PLAN.md (8 nodes) |
+| Status | Planned |
 | Milestone | v1 |
 
 **Progress:**
@@ -38,7 +38,7 @@ Phase:  [1  ] [2  ] [3  ] [4  ] [5  ] [6  ] [7  ] [8  ] [9  ]
 |--------|-------|
 | Phases total | 9 |
 | Phases complete | 0 |
-| Plans complete | 0 |
+| Plans complete | 1 |
 | Requirements mapped | 25/25 |
 
 ---
@@ -62,7 +62,8 @@ Phase:  [1  ] [2  ] [3  ] [4  ] [5  ] [6  ] [7  ] [8  ] [9  ]
 
 ### Active Todos
 
-- [ ] Plan Phase 1
+- [x] Plan Phase 1
+- [ ] Execute Phase 1
 
 ### Blockers
 
@@ -76,7 +77,7 @@ None
 
 1. Read `ROADMAP.md` for phase structure and success criteria
 2. Read this file for current position and accumulated decisions
-3. Run `/gsd:plan-phase 1` to begin
+3. Run `/gsd:execute-phase` to begin implementation
 
 ### Context Summary
 
