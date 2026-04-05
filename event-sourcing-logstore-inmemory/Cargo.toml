@@ -1,0 +1,7 @@
+[package]
+name = "event-sourcing-logstore-inmemory"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+event-sourcing = { path = "../event-sourcing" }
