@@ -1,0 +1,15 @@
+[package]
+name = "event-sourcing"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+futures-core = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+futures = "0.3"
+serde_json = { workspace = true }

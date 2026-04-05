@@ -33,7 +33,7 @@
   3. `AppendError` distinguishes `ConcurrencyConflict` from `StorageFailure` via a typed enum that a caller can match on
   4. The `LogStore` trait is declared with `async-trait`, compiles against `dyn LogStore`, and has no domain logic in its method signatures
   5. In-memory unit tests can import core types from `event-sourcing` and the blank storage trait from the same crate
-**Plans**: TBD
+**Plans**: 01-PLAN.md (8 nodes: scaffold, stream IDs, sequence IDs, StoredEvent, errors, LogStore trait, module structure, tests)
 
 ### Phase 2: In-Memory Log Store
 **Goal**: A caller can append events to named streams and read them back in order using an in-memory store — providing the test harness all future phases depend on
@@ -137,7 +137,7 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Workspace Setup and Core Types | 0/? | Not started | - |
+| 1. Workspace Setup and Core Types | 1/1 | Planned | - |
 | 2. In-Memory Log Store | 0/? | Not started | - |
 | 3. Event Log and Optimistic Concurrency | 0/? | Not started | - |
 | 4. Projection Engine — Single-Stream | 0/? | Not started | - |
