@@ -214,6 +214,64 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
 - **D-32:** The library database owns: `events`, `event_schemas`, `projection_definitions`, `projections` (checkpoint + raw `serde_json::Value` state), `observers`. The application database owns the actual read model storage (could be Redis, PostgreSQL, graph DB, or anything). For v1, raw state is temporarily materialized in the library DB as `serde_json::Value`.
 - **D-33:** Two observer invocation modes on `EventLog`: `register_inline(observer)` (synchronous, blocks `append`) and `register_eventual(observer)` (background, eventual consistency). The `Observer` trait is the same for both — the difference is registration.
 
+### projection! Macro — Query Language DSL (Proposal H — in progress)
+
+The `projection!` macro is a **query language**, not a Rust-mimicking DSL. It does not try to look like Rust. Design is informed by SQL, GraphQL, and pipe-based languages.
+
+**Settled syntax (Proposal H):**
+
+```
+projection OrderView {
+    from "orders" o
+    join "products" p on product_id
+
+    product_id: o.OrderPlaced.product_id
+
+    status:  o.OrderPlaced.status
+           | o.OrderCancelled = "cancelled"
+           |? "draft"
+
+    total:  o.OrderPlaced.total_cents
+          |+ o.ItemAdded.price_cents
+          |- o.ItemRemoved.price_cents
+          |? 0
+
+    items[id] {
+        removed_by: o.ItemRemoved.item_id
+                  | o.ItemArchived.item_id
+
+        id:         o.ItemAdded.item_id
+        name:       o.ItemAdded.name
+                  | p.ProductUpdated.name
+        quantity:   o.ItemAdded.quantity
+                  |+ o.ItemUpdated.delta
+                  |? 0
+        note?:      o.ItemNoteAdded.text
+    }
+
+    product_name?: p.ProductUpdated.name
+                 |? "unknown"
+}
+```
+
+**Settled rules:**
+- `field:` — required (`T`). `field?:` — optional (`Option<T>`). Required by default.
+- `|` — pipe: on this event, assign. `|+` increment. `|-` decrement. `|?` default (always last).
+- `o.EventType.field` — event field reference via stream alias + event type + field name.
+- `o.EventType = "literal"` — literal value assignment from a specific event.
+- `|+ o.Event.field` and `o.Event += field` are aliases.
+- Required and default are independent: `|? value` sets initial state regardless of `?:` suffix.
+- `{}` appears only on list fields, not on scalar fields.
+- `from "stream" alias` and `join "stream" alias on state_field` with SQL-style aliases.
+
+**Open — must discuss before planning:**
+- `removed_by` placement feels off — needs rethinking (currently inside the list block, but its placement and syntax are unsettled). Tracked in `.planning/todos/pending/removed-by-key-mapping-discussion.md`.
+- Joins inside list fields — how a joined stream event upserts/updates items within a list.
+- Composite list keys — syntax for `items[order_id, item_id]`.
+
+**Deferred to Phase 10:**
+- GROUP BY and window functions in the DSL (Phase 10 covers both the JSON schema extension and the query language surface).
+
 ### Claude's Discretion
 
 - Internal module layout within `event-sourcing` core for `EventSchemaDef`, `ProjectionDefinition`, `ProjectionEngine`, and `ReadModel`
@@ -307,4 +365,4 @@ Optional trait `ReadModelStore<M: ReadModel>` for users who want to persist read
 ---
 
 *Phase: 04-projection-engine-single-stream*
-*Context updated: 2026-04-06*
+*Context updated: 2026-04-06 (macro DSL discussion in progress — removed_by and list joins unresolved)*
