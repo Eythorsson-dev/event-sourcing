@@ -69,6 +69,16 @@ Plans:
 Plans:
 - [ ] 03-01-PLAN.md — EventLog<S> orchestrator with EventLogError, append/read delegation, and comprehensive tests
 
+### Phase 03.1: DCB Model Revision — StoredEvent, StreamId, and Sequence ID Accuracy (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 3
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 03.1 to break down)
+
 ### Phase 4: Projection Engine — Single-Stream
 **Goal**: A caller can describe a single-stream projection using a DSL macro that generates the read model struct, Projection trait impl, and JSON-serializable definition — then run it over a stored stream and get back a typed result
 **Depends on**: Phase 3
@@ -222,6 +232,16 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 12 to break down)
+
+### Phase 13: GDPR and value obfucation. The event schema should support sensitive fields. when fields are sensitive, the values should be stored in a separate key-value store/table.
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 12
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 13 to break down)
 
 ---
 *Created: 2026-04-04*
