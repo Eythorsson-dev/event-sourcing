@@ -14,8 +14,8 @@ progress:
 
 # Project State: Event Sourcing
 
-**Last updated:** 2026-04-04
-**Updated by:** roadmapper (initial creation)
+**Last updated:** 2026-04-06
+**Last activity:** 2026-04-06 - Completed quick task 260406-9cg: Fix GitHub Actions pipeline to run tests
 
 ---
 
@@ -85,6 +85,12 @@ Plan: Not started
 ### Blockers
 
 None
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260406-9cg | Fix GitHub Actions pipeline to run tests | 2026-04-06 | bbf0c93 | [260406-9cg-fix-github-actions-pipeline-to-run-tests](./quick/260406-9cg-fix-github-actions-pipeline-to-run-tests/) |
 
 ---
 
