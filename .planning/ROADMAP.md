@@ -49,7 +49,10 @@ Plans:
   3. A caller can read a stream by range (from sequence N to M) and receive only the requested slice
   4. The global sequence ID is monotonically increasing across streams — two appends to different streams return different, ordered IDs
   5. A caller using `InMemoryLogStore` in a test can pass it as `dyn LogStore` without unsafe code
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [x] 02-01-PLAN.md — InMemoryLogStore implementation with full LogStore trait coverage and comprehensive tests
 
 ### Phase 3: Event Log and Optimistic Concurrency
 **Goal**: A caller can append to an event stream with an expected version and receive a conflict error if a concurrent writer advanced the stream first — atomically, with no race window
@@ -142,7 +145,7 @@ Plans:
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Workspace Setup and Core Types | 0/2 | Not started | - |
-| 2. In-Memory Log Store | 0/? | Not started | - |
+| 2. In-Memory Log Store | 0/1 | Not started | - |
 | 3. Event Log and Optimistic Concurrency | 0/? | Not started | - |
 | 4. Projection Engine — Single-Stream | 0/? | Not started | - |
 | 5. Projection Engine — Multi-Stream and Catch-Up | 0/? | Not started | - |
