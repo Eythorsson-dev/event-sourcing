@@ -18,6 +18,7 @@
 - [ ] **Phase 7: Observer Infrastructure** - Observer trait, three-state result, retry/backoff registry, and built-in ProjectionObserver
 - [ ] **Phase 8: SQLite Log Store** - Production-grade SQLite LogStore implementation with WAL mode and schema migrations
 - [ ] **Phase 9: Commands Crate** - Optional command pattern layer as a separate crate demonstrating the command→projection→append cycle
+- [ ] **Phase 10: Projection Query Language — GROUP BY and Window Functions** - Aggregation and windowed calculations in the projection DSL (discuss before planning)
 
 ---
 
@@ -203,7 +204,18 @@ Plans:
 
 **Total:** 27/27 mapped
 
-### Phase 10: Add an examples directory with numerious examples and use cases to show off the features and the usefullness of the library
+### Phase 10: Projection Query Language — GROUP BY and Window Functions
+
+**Goal:** [To be planned — discussion required before planning]
+**Note:** Covers both the `ProjectionDefinition` JSON schema extension for aggregations AND the query language surface that generates it. GROUP BY (grouping events by a key into sub-aggregates) and window functions (rolling sums, counts, moving averages over a bounded event window) are separate from list projections — they produce derived scalar values, not object collections.
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:discuss-phase 10 before planning)
+
+### Phase 11: Add an examples directory with numerious examples and use cases to show off the features and the usefullness of the library
 
 **Goal:** [To be planned]
 **Requirements**: TBD
@@ -213,17 +225,7 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 10 to break down)
 
-### Phase 11: Update the readme with details about what problem this library solves, and why the developer should use it. i want to be transparent about known limitations
-
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 10
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd:plan-phase 11 to break down)
-
-### Phase 12: Write Getting started docs, document the entire library and deploy it to crates.io
+### Phase 12: Update the readme with details about what problem this library solves, and why the developer should use it. i want to be transparent about known limitations
 
 **Goal:** [To be planned]
 **Requirements**: TBD
@@ -233,11 +235,21 @@ Plans:
 Plans:
 - [ ] TBD (run /gsd:plan-phase 12 to break down)
 
-### Phase 13: GDPR and value obfucation. The event schema should support sensitive fields. when fields are sensitive, the values should be stored in a separate key-value store/table.
+### Phase 13: Write Getting started docs, document the entire library and deploy it to crates.io
 
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 12
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 13 to break down)
+
+### Phase 14: GDPR and value obfucation. The event schema should support sensitive fields. when fields are sensitive, the values should be stored in a separate key-value store/table.
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 13
 **Plans:** 0 plans
 
 Plans:
