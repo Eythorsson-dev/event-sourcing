@@ -111,7 +111,14 @@ An unopinionated Rust event sourcing library built around a constrained event lo
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
-Conventions not yet established. Will populate as patterns emerge during development.
+### Local Setup
+
+Activate the pre-commit hook after cloning:
+```sh
+git config core.hooksPath .githooks
+```
+
+This runs `cargo fmt --all -- --check` before every commit, catching formatting issues before CI.
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->
