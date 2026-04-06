@@ -45,7 +45,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Storage
 
 - [ ] **STOR-01**: `LogStore` trait abstraction — user-implementable for any database
-- [ ] **STOR-02**: In-memory log store as separate crate (`event-sourcing-logstore-inmemory`)
+- [x] **STOR-02**: In-memory log store as separate crate (`event-sourcing-logstore-inmemory`)
 - [ ] **STOR-03**: SQLite log store as separate crate (`event-sourcing-logstore-sqlite`)
 
 ### Commands
@@ -117,7 +117,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | OBSV-03 | Phase 7 | Pending |
 | OBSV-04 | Phase 7 | Pending |
 | STOR-01 | Phase 1 | Pending |
-| STOR-02 | Phase 2 | Pending |
+| STOR-02 | Phase 2 | Complete |
 | STOR-03 | Phase 8 | Pending |
 | CMD-01 | Phase 9 | Pending |
 

@@ -52,7 +52,7 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 02-01-PLAN.md — InMemoryLogStore implementation with full LogStore trait coverage and comprehensive tests
+- [x] 02-01-PLAN.md — InMemoryLogStore implementation with full LogStore trait coverage and comprehensive tests
 
 ### Phase 3: Event Log and Optimistic Concurrency
 **Goal**: A caller can append to an event stream with an expected version and receive a conflict error if a concurrent writer advanced the stream first — atomically, with no race window
