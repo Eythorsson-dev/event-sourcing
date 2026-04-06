@@ -36,8 +36,8 @@
 **Plans:** 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Cargo workspace scaffold with 4 crates and centralized dependency management
-- [ ] 01-02-PLAN.md — Core types (StreamId, sequences, StoredEvent, errors) and LogStore trait
+- [x] 01-01-PLAN.md — Cargo workspace scaffold with 4 crates and centralized dependency management
+- [x] 01-02-PLAN.md — Core types (StreamId, sequences, StoredEvent, errors) and LogStore trait
 
 ### Phase 2: In-Memory Log Store
 **Goal**: A caller can append events to named streams and read them back in order using an in-memory store — providing the test harness all future phases depend on
