@@ -12,6 +12,10 @@ The projection engine is the heart — it powers read models, validates constrai
 
 ### Validated
 
+- [x] Cargo workspace with core crate and placeholder sibling crates — Validated in Phase 01: workspace-setup-and-core-types
+- [x] Core types: StreamId (validated), GlobalSequenceId, StreamSequenceId, StoredEvent, NewEvent — Validated in Phase 01: workspace-setup-and-core-types
+- [x] Typed error enums: AppendError (ConcurrencyConflict, StorageFailure), StoreError — Validated in Phase 01: workspace-setup-and-core-types
+- [x] LogStore trait with 5 async methods and associated EventStream type — Validated in Phase 01: workspace-setup-and-core-types
 - [x] In-memory log store (separate crate) — Validated in Phase 02: in-memory-log-store
 - [x] Trait-based storage abstraction (user-implementable for any database) — Validated in Phase 02: in-memory-log-store
 
