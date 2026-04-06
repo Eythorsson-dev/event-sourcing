@@ -64,7 +64,10 @@ Plans:
   3. Two concurrent appends to the same stream with the same expected version result in exactly one success and one `ConcurrencyConflict` — the race window is at the storage layer, not application code
   4. A caller can read all events for a stream by stream ID, receiving them in stream-sequence order
   5. A caller can read a partial stream range by supplying start and end sequence numbers
-**Plans**: TBD
+**Plans:** 1 plan
+
+Plans:
+- [ ] 03-01-PLAN.md — EventLog<S> orchestrator with EventLogError, append/read delegation, and comprehensive tests
 
 ### Phase 4: Projection Engine — Single-Stream
 **Goal**: A caller can describe a single-stream projection using a DSL macro that generates the read model struct, Projection trait impl, and JSON-serializable definition — then run it over a stored stream and get back a typed result
@@ -146,7 +149,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Workspace Setup and Core Types | 0/2 | Not started | - |
 | 2. In-Memory Log Store | 0/1 | Not started | - |
-| 3. Event Log and Optimistic Concurrency | 0/? | Not started | - |
+| 3. Event Log and Optimistic Concurrency | 0/1 | Not started | - |
 | 4. Projection Engine — Single-Stream | 0/? | Not started | - |
 | 5. Projection Engine — Multi-Stream and Catch-Up | 0/? | Not started | - |
 | 6. Constraint Validation | 0/? | Not started | - |
