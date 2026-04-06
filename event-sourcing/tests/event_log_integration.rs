@@ -26,7 +26,11 @@ async fn append_any_returns_global_sequence_id_1_for_first_event() {
     let log = make_log();
     let stream_id = StreamId::new("orders").unwrap();
     let result = log
-        .append(&stream_id, vec![new_event("OrderPlaced")], AppendCondition::Any)
+        .append(
+            &stream_id,
+            vec![new_event("OrderPlaced")],
+            AppendCondition::Any,
+        )
         .await;
     assert_eq!(result.unwrap(), GlobalSequenceId::new(1));
 }
@@ -37,9 +41,13 @@ async fn append_expected_version_conflict_returns_error() {
     let stream_id = StreamId::new("orders").unwrap();
 
     // First append succeeds — stream is now at version 1
-    log.append(&stream_id, vec![new_event("OrderPlaced")], AppendCondition::Any)
-        .await
-        .unwrap();
+    log.append(
+        &stream_id,
+        vec![new_event("OrderPlaced")],
+        AppendCondition::Any,
+    )
+    .await
+    .unwrap();
 
     // Second append with ExpectedVersion(ZERO) should conflict
     let result = log
@@ -66,15 +74,27 @@ async fn read_stream_returns_events_in_stream_sequence_order() {
     let log = make_log();
     let stream_id = StreamId::new("orders").unwrap();
 
-    log.append(&stream_id, vec![new_event("OrderPlaced")], AppendCondition::Any)
-        .await
-        .unwrap();
-    log.append(&stream_id, vec![new_event("OrderShipped")], AppendCondition::Any)
-        .await
-        .unwrap();
-    log.append(&stream_id, vec![new_event("OrderDelivered")], AppendCondition::Any)
-        .await
-        .unwrap();
+    log.append(
+        &stream_id,
+        vec![new_event("OrderPlaced")],
+        AppendCondition::Any,
+    )
+    .await
+    .unwrap();
+    log.append(
+        &stream_id,
+        vec![new_event("OrderShipped")],
+        AppendCondition::Any,
+    )
+    .await
+    .unwrap();
+    log.append(
+        &stream_id,
+        vec![new_event("OrderDelivered")],
+        AppendCondition::Any,
+    )
+    .await
+    .unwrap();
 
     let stream = log
         .read_stream(&stream_id, StreamSequenceId::new(1), None)
@@ -98,9 +118,13 @@ async fn read_stream_with_range_returns_bounded_events() {
     let stream_id = StreamId::new("orders").unwrap();
 
     for event_type in &["E1", "E2", "E3", "E4", "E5"] {
-        log.append(&stream_id, vec![new_event(event_type)], AppendCondition::Any)
-            .await
-            .unwrap();
+        log.append(
+            &stream_id,
+            vec![new_event(event_type)],
+            AppendCondition::Any,
+        )
+        .await
+        .unwrap();
     }
 
     let stream = log
@@ -160,7 +184,10 @@ async fn concurrent_appends_with_same_expected_version_yield_one_success_one_con
     let log1 = Arc::clone(&log);
     let log2 = Arc::clone(&log);
 
-    let (result1, result2): (Result<GlobalSequenceId, EventLogError>, Result<GlobalSequenceId, EventLogError>) = tokio::join!(
+    let (result1, result2): (
+        Result<GlobalSequenceId, EventLogError>,
+        Result<GlobalSequenceId, EventLogError>,
+    ) = tokio::join!(
         async move {
             log1.append(
                 &stream_id,

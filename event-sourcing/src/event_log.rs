@@ -74,10 +74,7 @@ impl<S: LogStore> EventLog<S> {
     /// Read all events across all streams from a global sequence position.
     /// `from` is inclusive. Events returned sorted by global_sequence.
     /// Returns StoreError directly — same contract as the underlying store.
-    pub async fn read_all(
-        &self,
-        from: GlobalSequenceId,
-    ) -> Result<S::EventStream, StoreError> {
+    pub async fn read_all(&self, from: GlobalSequenceId) -> Result<S::EventStream, StoreError> {
         self.store.read_all(from).await
     }
 }
