@@ -88,6 +88,7 @@ Plan: Not started
 - Phase 10 added: Add an examples directory with numerous examples and use cases to show off the features and the usefulness of the library
 - Phase 11 added: Update the readme — problem statement, why to use this library, known limitations
 - Phase 12 added: Getting started docs, full library documentation, deploy to crates.io
+- Phase 13 added: GDPR and value obfucation. The event schema should support sensitive fields. when fields are sensitive, the values should be stored in a separate key-value store/table.
 
 ### Blockers
 
