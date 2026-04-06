@@ -12,14 +12,14 @@ The projection engine is the heart — it powers read models, validates constrai
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] In-memory log store (separate crate) — Validated in Phase 02: in-memory-log-store
+- [x] Trait-based storage abstraction (user-implementable for any database) — Validated in Phase 02: in-memory-log-store
 
 ### Active
 
 - [ ] Event log with append that validates constraints before persisting
 - [ ] Optimistic concurrency on event streams
 - [ ] Sequence ID returned from append, usable for consistent reads
-- [ ] Trait-based storage abstraction (user-implementable for any database)
 - [ ] Observer trait for reacting to appended events (with retry/success/fail result type)
 - [ ] Projection observer — a built-in observer that saves read models to the database
 - [ ] Declarative projection definitions that serialize to JSON (`ProjectionDefinition`)
@@ -28,7 +28,6 @@ The projection engine is the heart — it powers read models, validates constrai
 - [ ] Constraints/invariants attached to event streams, validated via projection engine
 - [ ] Multi-stream constraints (constraints backed by multi-stream projections)
 - [ ] Optional inline catch-up on reads — if a projection is behind the requested sequence ID, update before returning
-- [ ] In-memory log store (separate crate)
 - [ ] SQLite log store (separate crate)
 
 ### Out of Scope
@@ -38,6 +37,10 @@ The projection engine is the heart — it powers read models, validates constrai
 - Authentication/authorization — not the library's concern
 - Networking/transport — this is a library, not a framework
 - Specific domain modeling patterns — the library is unopinionated
+
+## Current State
+
+Phase 02 complete — `InMemoryLogStore` crate implemented, all 17 tests passing, `LogStore` trait established as the storage abstraction.
 
 ## Context
 
@@ -91,4 +94,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-04 after initialization*
+*Last updated: 2026-04-06 after Phase 02 completion*
