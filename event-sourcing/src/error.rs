@@ -13,7 +13,9 @@ pub enum AppendCondition {
 /// Callers can match on variants (LOG-07).
 #[derive(Debug, thiserror::Error)]
 pub enum AppendError {
-    #[error("concurrency conflict: stream {stream_id} expected version {expected}, found {actual}")]
+    #[error(
+        "concurrency conflict: stream {stream_id} expected version {expected}, found {actual}"
+    )]
     ConcurrencyConflict {
         stream_id: StreamId,
         expected: StreamSequenceId,
@@ -53,7 +55,9 @@ mod tests {
             actual: StreamSequenceId::new(2),
         };
         match err {
-            AppendError::ConcurrencyConflict { expected, actual, .. } => {
+            AppendError::ConcurrencyConflict {
+                expected, actual, ..
+            } => {
                 assert_eq!(expected, StreamSequenceId::new(1));
                 assert_eq!(actual, StreamSequenceId::new(2));
             }

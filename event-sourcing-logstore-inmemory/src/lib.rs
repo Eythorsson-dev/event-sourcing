@@ -3,7 +3,7 @@ use std::sync::Arc;
 use std::time::SystemTime;
 
 use event_sourcing::{
-    AppendCondition, AppendError, GlobalSequenceId, LogStore, NewEvent, StoredEvent, StoreError,
+    AppendCondition, AppendError, GlobalSequenceId, LogStore, NewEvent, StoreError, StoredEvent,
     StreamId, StreamSequenceId,
 };
 use futures::stream::{self, Iter};
@@ -146,8 +146,7 @@ impl LogStore for InMemoryLogStore {
             .map(|v| {
                 v.iter()
                     .filter(|e| {
-                        e.stream_sequence >= from
-                            && to.is_none_or(|end| e.stream_sequence <= end)
+                        e.stream_sequence >= from && to.is_none_or(|end| e.stream_sequence <= end)
                     })
                     .cloned()
                     .map(Ok)
@@ -161,10 +160,7 @@ impl LogStore for InMemoryLogStore {
         Ok(stream::iter(events))
     }
 
-    async fn read_all(
-        &self,
-        from: GlobalSequenceId,
-    ) -> Result<Self::EventStream, StoreError> {
+    async fn read_all(&self, from: GlobalSequenceId) -> Result<Self::EventStream, StoreError> {
         let state = self.inner.read().await;
 
         let mut all_events: Vec<StoredEvent> = state
@@ -191,10 +187,7 @@ impl LogStore for InMemoryLogStore {
         Ok(state.current_sequence())
     }
 
-    async fn stream_version(
-        &self,
-        stream_id: &StreamId,
-    ) -> Result<StreamSequenceId, StoreError> {
+    async fn stream_version(&self, stream_id: &StreamId) -> Result<StreamSequenceId, StoreError> {
         let state = self.inner.read().await;
         let version = state
             .streams
@@ -382,11 +375,19 @@ mod tests {
         let sb = stream_id("stream-b");
 
         store
-            .append(&sa, vec![test_event("A1"), test_event("A2")], AppendCondition::Any)
+            .append(
+                &sa,
+                vec![test_event("A1"), test_event("A2")],
+                AppendCondition::Any,
+            )
             .await
             .unwrap();
         store
-            .append(&sb, vec![test_event("B1"), test_event("B2")], AppendCondition::Any)
+            .append(
+                &sb,
+                vec![test_event("B1"), test_event("B2")],
+                AppendCondition::Any,
+            )
             .await
             .unwrap();
         store
@@ -414,11 +415,19 @@ mod tests {
 
         // Append 5 events across streams
         store
-            .append(&sa, vec![test_event("A1"), test_event("A2")], AppendCondition::Any)
+            .append(
+                &sa,
+                vec![test_event("A1"), test_event("A2")],
+                AppendCondition::Any,
+            )
             .await
             .unwrap();
         store
-            .append(&sb, vec![test_event("B1"), test_event("B2"), test_event("B3")], AppendCondition::Any)
+            .append(
+                &sb,
+                vec![test_event("B1"), test_event("B2"), test_event("B3")],
+                AppendCondition::Any,
+            )
             .await
             .unwrap();
 
@@ -570,7 +579,9 @@ mod tests {
             .await;
 
         match result {
-            Err(AppendError::ConcurrencyConflict { expected, actual, .. }) => {
+            Err(AppendError::ConcurrencyConflict {
+                expected, actual, ..
+            }) => {
                 assert_eq!(expected, StreamSequenceId::new(1));
                 assert_eq!(actual, StreamSequenceId::new(2));
             }
@@ -640,7 +651,11 @@ mod tests {
         let sb = stream_id("b");
 
         store
-            .append(&sa, vec![test_event("A1"), test_event("A2")], AppendCondition::Any)
+            .append(
+                &sa,
+                vec![test_event("A1"), test_event("A2")],
+                AppendCondition::Any,
+            )
             .await
             .unwrap();
         store
