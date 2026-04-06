@@ -193,5 +193,35 @@ Plans:
 
 **Total:** 27/27 mapped
 
+### Phase 10: Add an examples directory with numerious examples and use cases to show off the features and the usefullness of the library
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 9
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 10 to break down)
+
+### Phase 11: Update the readme with details about what problem this library solves, and why the developer should use it. i want to be transparent about known limitations
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 10
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 11 to break down)
+
+### Phase 12: Write Getting started docs, document the entire library and deploy it to crates.io
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 11
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd:plan-phase 12 to break down)
+
 ---
 *Created: 2026-04-04*

@@ -83,6 +83,12 @@ Plan: Not started
 
 - [ ] Plan Phase 1
 
+### Roadmap Evolution
+
+- Phase 10 added: Add an examples directory with numerous examples and use cases to show off the features and the usefulness of the library
+- Phase 11 added: Update the readme — problem statement, why to use this library, known limitations
+- Phase 12 added: Getting started docs, full library documentation, deploy to crates.io
+
 ### Blockers
 
 None
