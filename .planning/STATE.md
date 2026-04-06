@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-06T05:24:40.332Z"
+last_updated: "2026-04-06T07:39:08.988Z"
 last_activity: 2026-04-06
 progress:
   total_phases: 9
   completed_phases: 2
-  total_plans: 3
+  total_plans: 4
   completed_plans: 3
   percent: 33
 ---
@@ -24,7 +24,7 @@ progress:
 
 **Core Value:** The projection engine is the heart — it powers read models, validates constraints, and enables multi-stream joins, all from a single declarative definition that serializes to JSON.
 
-**Current Focus:** Phase 01 — workspace-setup-and-core-types
+**Current Focus:** Phase 03 — event-log-and-optimistic-concurrency
 
 ---
 
@@ -41,8 +41,8 @@ progress:
 **Progress:**
 
 [███░░░░░░░] 33%
-Phase: 02
-Plan: Not started
+Phase: 03 (event-log-and-optimistic-concurrency) — EXECUTING
+Plan: 1 of 1
         [----] [----] [----] [----] [----] [----] [----] [----] [----]
         0%                                                       100%
 

@@ -5,12 +5,14 @@
 
 pub mod error;
 pub mod event;
+pub mod event_log;
 pub mod store;
 pub mod types;
 
 // Re-export primary public API at crate root for ergonomic imports
 pub use error::{AppendCondition, AppendError, StoreError};
 pub use event::StoredEvent;
+pub use event_log::{EventLog, EventLogError};
 pub use store::LogStore;
 pub use types::{GlobalSequenceId, InvalidStreamId, NewEvent, StreamId, StreamSequenceId};
 
