@@ -1,25 +1,24 @@
-use crate::types::{StreamId, StreamSequenceId};
+use crate::query::Query;
+use crate::types::GlobalSequenceId;
 
-/// Condition for optimistic concurrency on append. Used by LogStore::append.
+/// Condition for optimistic concurrency on append.
+/// Semantics: fail if any events matching `query` have been appended after position `after`.
 #[derive(Debug, Clone)]
-pub enum AppendCondition {
-    /// Stream must be at exactly this version.
-    ExpectedVersion(StreamSequenceId),
-    /// No version check — append unconditionally.
-    Any,
+pub struct AppendCondition {
+    pub query: Query,
+    pub after: GlobalSequenceId,
 }
 
 /// Error from append operations. Distinguishes ConcurrencyConflict from StorageFailure.
-/// Callers can match on variants (LOG-07).
+/// Callers can match on variants.
 #[derive(Debug, thiserror::Error)]
 pub enum AppendError {
     #[error(
-        "concurrency conflict: stream {stream_id} expected version {expected}, found {actual}"
+        "concurrency conflict: event at position {conflicting_position} matched query after position {checked_after}"
     )]
     ConcurrencyConflict {
-        stream_id: StreamId,
-        expected: StreamSequenceId,
-        actual: StreamSequenceId,
+        conflicting_position: GlobalSequenceId,
+        checked_after: GlobalSequenceId,
     },
 
     #[error("storage failure: {0}")]
@@ -36,30 +35,30 @@ pub enum StoreError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::query::Query;
+    use crate::types::GlobalSequenceId;
 
     #[test]
-    fn append_condition_any_can_be_constructed() {
-        let _cond = AppendCondition::Any;
-    }
-
-    #[test]
-    fn append_condition_expected_version_can_be_constructed() {
-        let _cond = AppendCondition::ExpectedVersion(StreamSequenceId::new(2));
+    fn append_condition_can_be_constructed() {
+        let _cond = AppendCondition {
+            query: Query::all(),
+            after: GlobalSequenceId::ZERO,
+        };
     }
 
     #[test]
     fn append_error_concurrency_conflict_can_be_matched() {
         let err = AppendError::ConcurrencyConflict {
-            stream_id: StreamId::new("orders").unwrap(),
-            expected: StreamSequenceId::new(1),
-            actual: StreamSequenceId::new(2),
+            conflicting_position: GlobalSequenceId::new(5),
+            checked_after: GlobalSequenceId::ZERO,
         };
         match err {
             AppendError::ConcurrencyConflict {
-                expected, actual, ..
+                conflicting_position,
+                checked_after,
             } => {
-                assert_eq!(expected, StreamSequenceId::new(1));
-                assert_eq!(actual, StreamSequenceId::new(2));
+                assert_eq!(conflicting_position, GlobalSequenceId::new(5));
+                assert_eq!(checked_after, GlobalSequenceId::ZERO);
             }
             other => panic!("unexpected variant: {:?}", other),
         }

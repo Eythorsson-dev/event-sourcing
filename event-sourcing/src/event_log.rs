@@ -1,27 +1,39 @@
 use crate::error::{AppendCondition, AppendError, StoreError};
+use crate::event::StoredEvent;
+use crate::query::Query;
 use crate::store::LogStore;
-use crate::types::{GlobalSequenceId, NewEvent, StreamId, StreamSequenceId};
+use crate::types::{GlobalSequenceId, NewEvent};
+use futures_core::Stream;
 
 /// Error from EventLog operations. Distinct from AppendError and StoreError.
 /// Provides the user-facing error surface for append operations at the EventLog level.
 #[derive(Debug, thiserror::Error)]
 pub enum EventLogError {
     #[error(
-        "concurrency conflict: stream {stream_id} expected version {expected}, found {actual}"
+        "concurrency conflict: event at position {conflicting_position} matched query after position {checked_after}"
     )]
     ConcurrencyConflict {
-        stream_id: StreamId,
-        expected: StreamSequenceId,
-        actual: StreamSequenceId,
+        conflicting_position: GlobalSequenceId,
+        checked_after: GlobalSequenceId,
     },
 
     #[error("storage failure: {0}")]
     StorageFailure(#[source] Box<dyn std::error::Error + Send + Sync>),
 }
 
+/// Error from consuming an event stream with single() or similar operations.
+#[derive(Debug, thiserror::Error)]
+pub enum StreamError {
+    #[error("stream was empty, expected exactly one event")]
+    Empty,
+    #[error("stream had multiple events, expected exactly one")]
+    Multiple,
+    #[error("stream error: {0}")]
+    Store(#[from] StoreError),
+}
+
 /// Orchestrates event log operations over a `LogStore` backend.
 /// Provides a stable user-facing API that decouples callers from storage implementation details.
-/// Future enrichment (constraints, observers, catch-up reads) can be added here without changing caller code.
 #[derive(Clone)]
 pub struct EventLog<S: LogStore> {
     store: S,
@@ -33,72 +45,155 @@ impl<S: LogStore> EventLog<S> {
         Self { store }
     }
 
-    /// Append events to a stream with an optional concurrency check.
+    /// Append events with an optional concurrency check.
     /// Returns the new global sequence ID on success.
     /// Maps AppendError variants to EventLogError — explicit match for auditable layer separation.
     pub async fn append(
         &self,
-        stream_id: &StreamId,
         events: Vec<NewEvent>,
-        condition: AppendCondition,
+        condition: Option<AppendCondition>,
     ) -> Result<GlobalSequenceId, EventLogError> {
         self.store
-            .append(stream_id, events, condition)
+            .append(events, condition)
             .await
             .map_err(|e| match e {
                 AppendError::ConcurrencyConflict {
-                    stream_id,
-                    expected,
-                    actual,
+                    conflicting_position,
+                    checked_after,
                 } => EventLogError::ConcurrencyConflict {
-                    stream_id,
-                    expected,
-                    actual,
+                    conflicting_position,
+                    checked_after,
                 },
                 AppendError::StorageFailure(source) => EventLogError::StorageFailure(source),
             })
     }
 
-    /// Read events from a specific stream, optionally bounded by sequence range.
-    /// `from` is inclusive. `to` is inclusive if provided (None = read to end).
+    /// Query events matching the given filter from a global sequence position.
     /// Returns StoreError directly — same contract as the underlying store.
-    pub async fn read_stream(
+    pub async fn query(
         &self,
-        stream_id: &StreamId,
-        from: StreamSequenceId,
-        to: Option<StreamSequenceId>,
+        query: Query,
+        from: GlobalSequenceId,
     ) -> Result<S::EventStream, StoreError> {
-        self.store.read_stream(stream_id, from, to).await
+        self.store.query(query, from).await
     }
 
-    /// Read all events across all streams from a global sequence position.
-    /// `from` is inclusive. Events returned sorted by global_sequence.
-    /// Returns StoreError directly — same contract as the underlying store.
-    pub async fn read_all(&self, from: GlobalSequenceId) -> Result<S::EventStream, StoreError> {
-        self.store.read_all(from).await
+    /// Get the current highest global sequence ID.
+    pub async fn current_sequence(&self) -> Result<GlobalSequenceId, StoreError> {
+        self.store.current_sequence().await
+    }
+}
+
+/// Extension trait providing ergonomic consumption methods over event streams.
+/// Follows the `futures::StreamExt` pattern — blanket-impl over any compatible stream.
+pub trait EventStreamExt: Stream<Item = Result<StoredEvent, StoreError>> {
+    /// Consume the stream expecting exactly one event.
+    /// Returns `StreamError::Empty` if no events, `StreamError::Multiple` if more than one.
+    fn single(self) -> impl std::future::Future<Output = Result<StoredEvent, StreamError>> + Send
+    where
+        Self: Sized + Unpin + Send;
+
+    /// Consume the stream returning the first event, or `None` if empty.
+    fn first(
+        self,
+    ) -> impl std::future::Future<Output = Result<Option<StoredEvent>, StoreError>> + Send
+    where
+        Self: Sized + Unpin + Send;
+}
+
+/// Poll a stream for its next item using the futures_core low-level API.
+fn poll_next_unpin<S>(
+    stream: &mut S,
+    cx: &mut std::task::Context<'_>,
+) -> std::task::Poll<Option<S::Item>>
+where
+    S: Stream + Unpin,
+{
+    use std::pin::Pin;
+    Pin::new(stream).poll_next(cx)
+}
+
+/// Async helper: get the next item from an Unpin stream.
+async fn stream_next<S>(stream: &mut S) -> Option<S::Item>
+where
+    S: Stream + Unpin,
+{
+    std::future::poll_fn(|cx| poll_next_unpin(stream, cx)).await
+}
+
+impl<S> EventStreamExt for S
+where
+    S: Stream<Item = Result<StoredEvent, StoreError>> + Sized + Unpin + Send,
+{
+    fn single(
+        mut self,
+    ) -> impl std::future::Future<Output = Result<StoredEvent, StreamError>> + Send
+    where
+        Self: Sized + Unpin + Send,
+    {
+        async move {
+            let first = stream_next(&mut self).await;
+            match first {
+                None => Err(StreamError::Empty),
+                Some(Err(e)) => Err(StreamError::Store(e)),
+                Some(Ok(event)) => {
+                    let second = stream_next(&mut self).await;
+                    match second {
+                        None => Ok(event),
+                        Some(Err(e)) => Err(StreamError::Store(e)),
+                        Some(Ok(_)) => Err(StreamError::Multiple),
+                    }
+                }
+            }
+        }
+    }
+
+    fn first(
+        mut self,
+    ) -> impl std::future::Future<Output = Result<Option<StoredEvent>, StoreError>> + Send
+    where
+        Self: Sized + Unpin + Send,
+    {
+        async move {
+            match stream_next(&mut self).await {
+                None => Ok(None),
+                Some(Err(e)) => Err(e),
+                Some(Ok(event)) => Ok(Some(event)),
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::{GlobalSequenceId, Tag};
+    use std::collections::HashSet;
+    use std::time::SystemTime;
+
+    fn make_stored_event(seq: u64, event_type: &str) -> StoredEvent {
+        StoredEvent {
+            global_sequence: GlobalSequenceId::new(seq),
+            event_type: event_type.to_string(),
+            payload: serde_json::json!({}),
+            tags: HashSet::new(),
+            timestamp: SystemTime::now(),
+        }
+    }
 
     #[test]
     fn event_log_error_concurrency_conflict_is_matchable() {
         let err = EventLogError::ConcurrencyConflict {
-            stream_id: StreamId::new("orders").unwrap(),
-            expected: StreamSequenceId::new(1),
-            actual: StreamSequenceId::new(3),
+            conflicting_position: GlobalSequenceId::new(5),
+            checked_after: GlobalSequenceId::ZERO,
         };
         match err {
             EventLogError::ConcurrencyConflict {
-                stream_id,
-                expected,
-                actual,
+                conflicting_position,
+                checked_after,
             } => {
-                assert_eq!(stream_id.as_str(), "orders");
-                assert_eq!(expected, StreamSequenceId::new(1));
-                assert_eq!(actual, StreamSequenceId::new(3));
+                assert_eq!(conflicting_position, GlobalSequenceId::new(5));
+                assert_eq!(checked_after, GlobalSequenceId::ZERO);
             }
             other => panic!("unexpected variant: {:?}", other),
         }
@@ -114,16 +209,54 @@ mod tests {
         }
     }
 
-    #[test]
-    fn event_log_error_display_includes_stream_id_and_versions() {
-        let err = EventLogError::ConcurrencyConflict {
-            stream_id: StreamId::new("orders").unwrap(),
-            expected: StreamSequenceId::new(0),
-            actual: StreamSequenceId::new(1),
-        };
-        let msg = err.to_string();
-        assert!(msg.contains("orders"), "display should include stream_id");
-        assert!(msg.contains('0'), "display should include expected version");
-        assert!(msg.contains('1'), "display should include actual version");
+    #[tokio::test]
+    async fn single_one_event() {
+        let event = make_stored_event(1, "OrderPlaced");
+        let stream = futures::stream::iter(vec![Ok::<StoredEvent, StoreError>(event.clone())]);
+        let result = stream.single().await;
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().event_type, "OrderPlaced");
+    }
+
+    #[tokio::test]
+    async fn single_empty() {
+        let stream = futures::stream::iter(vec![] as Vec<Result<StoredEvent, StoreError>>);
+        let result = stream.single().await;
+        assert!(matches!(result, Err(StreamError::Empty)));
+    }
+
+    #[tokio::test]
+    async fn single_multiple() {
+        let e1 = make_stored_event(1, "E1");
+        let e2 = make_stored_event(2, "E2");
+        let stream = futures::stream::iter(vec![
+            Ok::<StoredEvent, StoreError>(e1),
+            Ok::<StoredEvent, StoreError>(e2),
+        ]);
+        let result = stream.single().await;
+        assert!(matches!(result, Err(StreamError::Multiple)));
+    }
+
+    #[tokio::test]
+    async fn first_non_empty() {
+        let e1 = make_stored_event(1, "E1");
+        let e2 = make_stored_event(2, "E2");
+        let stream = futures::stream::iter(vec![
+            Ok::<StoredEvent, StoreError>(e1),
+            Ok::<StoredEvent, StoreError>(e2),
+        ]);
+        let result = stream.first().await;
+        assert!(result.is_ok());
+        let opt = result.unwrap();
+        assert!(opt.is_some());
+        assert_eq!(opt.unwrap().event_type, "E1");
+    }
+
+    #[tokio::test]
+    async fn first_empty() {
+        let stream = futures::stream::iter(vec![] as Vec<Result<StoredEvent, StoreError>>);
+        let result = stream.first().await;
+        assert!(result.is_ok());
+        assert!(result.unwrap().is_none());
     }
 }
