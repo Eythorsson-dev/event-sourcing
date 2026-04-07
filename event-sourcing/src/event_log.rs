@@ -168,7 +168,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{GlobalSequenceId, Tag};
+    use crate::types::GlobalSequenceId;
     use std::collections::HashSet;
     use std::time::SystemTime;
 
