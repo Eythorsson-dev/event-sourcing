@@ -6,15 +6,17 @@
 pub mod error;
 pub mod event;
 pub mod event_log;
+pub mod query;
 pub mod store;
 pub mod types;
 
 // Re-export primary public API at crate root for ergonomic imports
 pub use error::{AppendCondition, AppendError, StoreError};
 pub use event::StoredEvent;
-pub use event_log::{EventLog, EventLogError};
+pub use event_log::{EventLog, EventLogError, EventStreamExt, StreamError};
+pub use query::{Criterion, Query};
 pub use store::LogStore;
-pub use types::{GlobalSequenceId, InvalidStreamId, NewEvent, StreamId, StreamSequenceId};
+pub use types::{GlobalSequenceId, InvalidTag, NewEvent, Tag};
 
 #[cfg(test)]
 mod tests {
@@ -26,14 +28,17 @@ mod tests {
     #[test]
     fn core_types_importable() {
         // Verify all public types are accessible from the crate root
-        let _sid = StreamId::new("test").unwrap();
+        let _tag = Tag::new("course:c1").unwrap();
         let _gseq = GlobalSequenceId::new(1);
-        let _sseq = StreamSequenceId::new(1);
         let _new_event = NewEvent {
             event_type: "test".to_string(),
             payload: serde_json::json!({}),
+            tags: std::collections::HashSet::new(),
         };
-        let _condition = AppendCondition::Any;
-        let _condition2 = AppendCondition::ExpectedVersion(StreamSequenceId::new(1));
+        let _condition = AppendCondition {
+            query: Query::all(),
+            after: GlobalSequenceId::ZERO,
+        };
+        let _q = Query::match_tags([Tag::new("a").unwrap()]);
     }
 }
