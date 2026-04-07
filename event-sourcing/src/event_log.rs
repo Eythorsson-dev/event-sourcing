@@ -121,6 +121,7 @@ where
     std::future::poll_fn(|cx| poll_next_unpin(stream, cx)).await
 }
 
+#[allow(clippy::manual_async_fn)]
 impl<S> EventStreamExt for S
 where
     S: Stream<Item = Result<StoredEvent, StoreError>> + Sized + Unpin + Send,
