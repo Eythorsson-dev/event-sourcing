@@ -72,13 +72,14 @@ Plans:
 
 ### Phase 03.1: DCB Model Revision — StoredEvent, StreamId, and Sequence ID Accuracy (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
-**Requirements**: TBD
+**Goal:** Revise core types (StoredEvent, sequence IDs, concurrency model) and LogStore trait to align with the DCB pattern — replacing stream-based identity with tag-based event classification and query-based concurrency
+**Requirements**: LOG-01, LOG-02, LOG-03, LOG-04, LOG-05, LOG-06, LOG-07
 **Depends on:** Phase 3
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd:plan-phase 03.1 to break down)
+- [ ] 03.1-01-PLAN.md — Core type revision: Tag, Query, revised StoredEvent/AppendCondition/LogStore/EventLog + EventStreamExt
+- [ ] 03.1-02-PLAN.md — InMemoryLogStore rewrite for flat tag-based model with query filtering and condition checks
 
 ### Phase 4: Projection Engine — Single-Stream
 **Goal**: A caller can describe a single-stream projection using a DSL macro that generates the read model struct, Projection trait impl, and JSON-serializable definition — then run it over a stored stream and get back a typed result
