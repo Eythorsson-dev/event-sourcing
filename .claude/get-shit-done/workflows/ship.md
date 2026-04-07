@@ -12,7 +12,7 @@ Read all files referenced by the invoking prompt's execution_context before star
 Parse arguments and load project state:
 
 ```bash
-INIT=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
+INIT=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -20,14 +20,14 @@ Parse from init JSON: `phase_found`, `phase_dir`, `phase_number`, `phase_name`, 
 
 Also load config for branching strategy:
 ```bash
-CONFIG=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" state load)
+CONFIG=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" state load)
 ```
 
 Extract: `branching_strategy`, `branch_name`.
 
 Detect base branch for PRs and merges:
 ```bash
-BASE_BRANCH=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get git.base_branch 2>/dev/null || echo "")
+BASE_BRANCH=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get git.base_branch 2>/dev/null || echo "")
 if [ -z "$BASE_BRANCH" ] || [ "$BASE_BRANCH" = "null" ]; then
   BASE_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|^refs/remotes/origin/||')
   BASE_BRANCH="${BASE_BRANCH:-main}"
@@ -186,13 +186,13 @@ Report the PR URL and suggest: "Review the diff at {url}/files"
 Update STATE.md to reflect the shipping action:
 
 ```bash
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" state update "Last Activity" "$(date +%Y-%m-%d)"
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" state update "Status" "Phase ${PHASE_NUMBER} shipped — PR #${PR_NUMBER}"
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" state update "Last Activity" "$(date +%Y-%m-%d)"
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" state update "Status" "Phase ${PHASE_NUMBER} shipped — PR #${PR_NUMBER}"
 ```
 
 If `commit_docs` is true:
 ```bash
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): ship phase ${PHASE_NUMBER} — PR #${PR_NUMBER}" --files .planning/STATE.md
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): ship phase ${PHASE_NUMBER} — PR #${PR_NUMBER}" --files .planning/STATE.md
 ```
 </step>
 

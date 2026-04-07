@@ -5,7 +5,11 @@ Create executable phase prompts (PLAN.md files) for a roadmap phase with integra
 <required_reading>
 Read all files referenced by the invoking prompt's execution_context before starting.
 
-@/home/user/event-sourcing/.claude/get-shit-done/references/ui-brand.md
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/ui-brand.md
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/revision-loop.md
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/gate-prompts.md
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/agent-contracts.md
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/gates.md
 </required_reading>
 
 <available_agent_types>
@@ -22,12 +26,12 @@ Valid GSD subagent types (use exact names — do not fall back to 'general-purpo
 Load all context in one call (paths only to minimize orchestrator context):
 
 ```bash
-INIT=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init plan-phase "$PHASE")
+INIT=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init plan-phase "$PHASE")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
-AGENT_SKILLS_RESEARCHER=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-researcher 2>/dev/null)
-AGENT_SKILLS_PLANNER=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-planner 2>/dev/null)
-AGENT_SKILLS_CHECKER=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-checker 2>/dev/null)
-CONTEXT_WINDOW=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get context_window 2>/dev/null || echo "200000")
+AGENT_SKILLS_RESEARCHER=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-researcher 2>/dev/null)
+AGENT_SKILLS_PLANNER=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-planner 2>/dev/null)
+AGENT_SKILLS_CHECKER=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" agent-skills gsd-checker 2>/dev/null)
+CONTEXT_WINDOW=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get context_window 2>/dev/null || echo "200000")
 ```
 
 When `CONTEXT_WINDOW >= 500000`, the planner prompt includes prior phase CONTEXT.md files so cross-phase decisions are consistent (e.g., "use library X for all data fetching" from Phase 2 is visible to Phase 5's planner).
@@ -78,7 +82,7 @@ Exit workflow.
 ## 3. Validate Phase
 
 ```bash
-PHASE_INFO=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
+PHASE_INFO=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}")
 ```
 
 **If `found` is false:** Error with available phases. **If `found` is true:** Extract `phase_number`, `phase_name`, `goal` from JSON.
@@ -180,7 +184,7 @@ Use full relative paths. Group by topic area.]
 
 5. Commit:
 ```bash
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): generate context from PRD" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${padded_phase}): generate context from PRD" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
 
 6. Set `context_content` to the generated CONTEXT.md content and continue to step 5 (Handle Research).
@@ -199,7 +203,7 @@ If `context_path` is not null, display: `Using phase context from: ${context_pat
 
 Read discuss mode for context gate label:
 ```bash
-DISCUSS_MODE=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.discuss_mode 2>/dev/null || echo "discuss")
+DISCUSS_MODE=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.discuss_mode 2>/dev/null || echo "discuss")
 ```
 
 If `TEXT_MODE` is true, present as a plain-text numbered list:
@@ -289,7 +293,7 @@ Display banner:
 ### Spawn gsd-phase-researcher
 
 ```bash
-PHASE_DESC=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick section)
+PHASE_DESC=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick section)
 ```
 
 Research prompt:
@@ -353,7 +357,7 @@ grep -l "## Validation Architecture" "${PHASE_DIR}"/*-RESEARCH.md 2>/dev/null ||
 ```
 
 **If found:**
-1. Read template: `/home/user/event-sourcing/.claude/get-shit-done/templates/VALIDATION.md`
+1. Read template: `/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/templates/VALIDATION.md`
 2. Write to `${PHASE_DIR}/${PADDED_PHASE}-VALIDATION.md` (use Write tool)
 3. Fill frontmatter: `{N}` → phase number, `{phase-slug}` → slug, `{date}` → current date
 4. Verify:
@@ -370,9 +374,9 @@ test -f "${PHASE_DIR}/${PADDED_PHASE}-VALIDATION.md" && echo "VALIDATION_CREATED
 > Skip if `workflow.security_enforcement` is explicitly `false`. Absent = enabled.
 
 ```bash
-SECURITY_CFG=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.security_enforcement --raw 2>/dev/null || echo "true")
-SECURITY_ASVS=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.security_asvs_level --raw 2>/dev/null || echo "1")
-SECURITY_BLOCK=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.security_block_on --raw 2>/dev/null || echo "high")
+SECURITY_CFG=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.security_enforcement --raw 2>/dev/null || echo "true")
+SECURITY_ASVS=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.security_asvs_level --raw 2>/dev/null || echo "1")
+SECURITY_BLOCK=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.security_block_on --raw 2>/dev/null || echo "high")
 ```
 
 **If `SECURITY_CFG` is `false`:** Skip to step 5.6.
@@ -396,8 +400,8 @@ Continue to step 5.6. Security config is passed to the planner in step 8.
 > Skip if `workflow.ui_phase` is explicitly `false` AND `workflow.ui_safety_gate` is explicitly `false` in `.planning/config.json`. If keys are absent, treat as enabled.
 
 ```bash
-UI_PHASE_CFG=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
-UI_GATE_CFG=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_safety_gate 2>/dev/null || echo "true")
+UI_PHASE_CFG=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
+UI_GATE_CFG=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_safety_gate 2>/dev/null || echo "true")
 ```
 
 **If both are `false`:** Skip to step 6.
@@ -405,7 +409,7 @@ UI_GATE_CFG=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tool
 Check if phase has frontend indicators:
 
 ```bash
-PHASE_SECTION=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" 2>/dev/null)
+PHASE_SECTION=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" 2>/dev/null)
 echo "$PHASE_SECTION" | grep -iE "UI|interface|frontend|component|layout|page|screen|view|form|dashboard|widget" > /dev/null 2>&1
 HAS_UI=$?
 ```
@@ -423,7 +427,7 @@ UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
 
 Read auto-chain state:
 ```bash
-AUTO_CHAIN=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+AUTO_CHAIN=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
 ```
 
 **If `AUTO_CHAIN` is `true` (running inside a `--chain` or `--auto` pipeline):**
@@ -469,7 +473,7 @@ Otherwise use AskUserQuestion:
 Check if any files in the phase scope match schema patterns:
 
 ```bash
-PHASE_SECTION=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick section 2>/dev/null)
+PHASE_SECTION=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "${PHASE}" --pick section 2>/dev/null)
 ```
 
 Scan `PHASE_SECTION`, `CONTEXT.md` (if loaded), and `RESEARCH.md` (if exists) for file paths matching these ORM patterns:
@@ -568,7 +572,7 @@ VALIDATION_EXISTS=$(ls "${PHASE_DIR}"/*-VALIDATION.md 2>/dev/null | head -1)
 If missing and Nyquist is still enabled/applicable — ask user:
 1. Re-run: `/gsd-plan-phase {PHASE} --research ${GSD_WS}`
 2. Disable Nyquist with the exact command:
-   `node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow.nyquist_validation false`
+   `node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow.nyquist_validation false`
 3. Continue anyway (plans fail Dimension 8)
 
 Proceed to Step 8 only if user selects 2 or 3.
@@ -769,13 +773,56 @@ Task(
 - **`## VERIFICATION PASSED`:** Display confirmation, proceed to step 13.
 - **`## ISSUES FOUND`:** Display issues, check iteration count, proceed to step 12.
 
+**Thinking partner for architectural tradeoffs (conditional):**
+If `features.thinking_partner` is enabled, scan the checker's issues for architectural tradeoff keywords
+("architecture", "approach", "strategy", "pattern", "vs", "alternative"). If found:
+
+```
+The plan-checker flagged an architectural decision point:
+{issue description}
+
+Brief analysis:
+- Option A: {approach_from_plan} — {pros/cons}
+- Option B: {alternative_approach} — {pros/cons}
+- Recommendation: {choice} aligned with {phase_goal}
+
+Apply this to the revision? [Yes] / [No, I'll decide]
+```
+
+If yes: include the recommendation in the revision prompt. If no: proceed to revision loop as normal.
+If thinking_partner disabled: skip this block entirely.
+
 ## 12. Revision Loop (Max 3 Iterations)
 
 Track `iteration_count` (starts at 1 after initial plan + check).
+Track `prev_issue_count` (initialized to `Infinity` before the loop begins).
+Track `stall_reentry_count` (starts at 0; incremented each time "Adjust approach" re-enters step 8).
 
 **If iteration_count < 3:**
 
-Display: `Sending back to planner for revision... (iteration {N}/3)`
+Parse issue count from checker return: count BLOCKER + WARNING entries in the YAML issues block (structured output from gsd-plan-checker). If the checker's return contains no YAML issues block (i.e., the plan was approved with no issues), treat `issue_count` as 0 and skip the stall check — the plan passed. Proceed to step 13.
+
+Display: `Revision iteration {N}/3 -- {blocker_count} blockers, {warning_count} warnings`
+
+**Stall detection:** If `issue_count >= prev_issue_count`:
+  Display: `Revision loop stalled — issue count not decreasing ({issue_count} issues remain after {N} iterations)`
+
+  **If `stall_reentry_count < 2`:**
+    Ask user:
+      Question: "Issues remain after {N} revision attempts with no progress. Proceed with current output?"
+      Options: "Proceed anyway" | "Adjust approach"
+    If "Proceed anyway": accept current plans and continue to step 13.
+    If "Adjust approach": increment `stall_reentry_count`, open freeform discussion, then re-enter step 8 (full replanning). Note: re-entry resets `iteration_count` and `prev_issue_count` but `stall_reentry_count` persists across re-entries and is capped at 2.
+
+  **If `stall_reentry_count >= 2`:**
+    Display: `Stall persists after 2 re-planning attempts. The following issues could not be resolved automatically:`
+    List the remaining issues from the checker.
+    Suggest: "Consider resolving these issues manually or running `/gsd-debug` to investigate root causes."
+    Options: "Proceed anyway" | "Abandon"
+    If "Proceed anyway": accept current plans and continue to step 13.
+    If "Abandon": stop workflow.
+
+Set `prev_issue_count = issue_count`.
 
 Revision prompt:
 
@@ -874,7 +921,7 @@ If `TEXT_MODE` is true, present as a plain-text numbered list (options already s
 After plans pass all gates, record that planning is complete so STATE.md reflects the new phase status:
 
 ```bash
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" state planned-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" state planned-phase --phase "${PHASE_NUMBER}" --name "${PHASE_NAME}" --plans "${PLAN_COUNT}"
 ```
 
 This updates STATUS to "Ready to execute", sets the correct plan count, and timestamps Last Activity.
@@ -891,19 +938,19 @@ Check for auto-advance trigger:
 2. **Sync chain flag with intent** — if user invoked manually (no `--auto` and no `--chain`), clear the ephemeral chain flag from any previous interrupted `--auto` chain. This does NOT touch `workflow.auto_advance` (the user's persistent settings preference):
    ```bash
    if [[ ! "$ARGUMENTS" =~ --auto ]] && [[ ! "$ARGUMENTS" =~ --chain ]]; then
-     node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
+     node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active false 2>/dev/null
    fi
    ```
 3. Read both the chain flag and user preference:
    ```bash
-   AUTO_CHAIN=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
-   AUTO_CFG=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
+   AUTO_CHAIN=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow._auto_chain_active 2>/dev/null || echo "false")
+   AUTO_CFG=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.auto_advance 2>/dev/null || echo "false")
    ```
 
 **If `--auto` or `--chain` flag present AND `AUTO_CHAIN` is not true:** Persist chain flag to config (handles direct invocation without prior discuss-phase):
 ```bash
 if ([[ "$ARGUMENTS" =~ --auto ]] || [[ "$ARGUMENTS" =~ --chain ]]) && [[ "$AUTO_CHAIN" != "true" ]]; then
-  node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active true
+  node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-set workflow._auto_chain_active true
 fi
 ```
 

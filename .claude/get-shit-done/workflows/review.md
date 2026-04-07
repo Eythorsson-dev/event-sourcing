@@ -43,15 +43,35 @@ Then run /gsd-review again.
 ```
 Exit.
 
-If only one CLI is the current runtime (e.g. running inside Claude), skip it for the review
-to ensure independence. At least one DIFFERENT CLI must be available.
+Determine which CLI to skip based on the current runtime environment:
+
+```bash
+# Environment-based runtime detection (priority order)
+if [ "$ANTIGRAVITY_AGENT" = "1" ]; then
+  # Antigravity is a separate client — all CLIs are external, skip none
+  SELF_CLI="none"
+elif [ -n "$CLAUDE_CODE_ENTRYPOINT" ]; then
+  # Running inside Claude Code CLI — skip claude for independence
+  SELF_CLI="claude"
+else
+  # Other environments (Gemini CLI, Codex CLI, etc.)
+  # Fall back to AI self-identification to decide which CLI to skip
+  SELF_CLI="auto"
+fi
+```
+
+Rules:
+- If `SELF_CLI="none"` → invoke ALL available CLIs (no skip)
+- If `SELF_CLI="claude"` → skip claude, use gemini/codex
+- If `SELF_CLI="auto"` → the executing AI identifies itself and skips its own CLI
+- At least one DIFFERENT CLI must be available for the review to proceed.
 </step>
 
 <step name="gather_context">
 Collect phase artifacts for the review prompt:
 
 ```bash
-INIT=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
+INIT=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op "${PHASE_ARG}")
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -128,7 +148,7 @@ gemini -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" 2>/dev/null > /tmp/gsd-revi
 
 **Claude (separate session):**
 ```bash
-claude -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" --no-input 2>/dev/null > /tmp/gsd-review-claude-{phase}.md
+claude -p "$(cat /tmp/gsd-review-prompt-{phase}.md)" 2>/dev/null > /tmp/gsd-review-claude-{phase}.md
 ```
 
 **Codex:**
@@ -224,7 +244,7 @@ plans_reviewed: [{list of PLAN.md files}]
 
 Commit:
 ```bash
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: cross-AI review for phase {N}" --files {phase_dir}/{padded_phase}-REVIEWS.md
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: cross-AI review for phase {N}" --files {phase_dir}/{padded_phase}-REVIEWS.md
 ```
 </step>
 

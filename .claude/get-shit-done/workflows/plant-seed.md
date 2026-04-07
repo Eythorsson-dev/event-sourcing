@@ -140,7 +140,7 @@ Related code and decisions found in the current codebase:
 
 <step name="commit_seed">
 ```bash
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: plant seed — {$IDEA}" --files .planning/seeds/SEED-{PADDED}-{slug}.md
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: plant seed — {$IDEA}" --files .planning/seeds/SEED-{PADDED}-{slug}.md
 ```
 </step>
 

@@ -48,7 +48,7 @@ When `--interactive` is set, discuss runs inline with questions (not auto-answer
 Bootstrap via milestone-level init:
 
 ```bash
-INIT=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init milestone-op)
+INIT=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init milestone-op)
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -82,7 +82,7 @@ If `INTERACTIVE` is set, display: `Mode: Interactive (discuss inline, plan+execu
 Run phase discovery:
 
 ```bash
-ROADMAP=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
+ROADMAP=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 ```
 
 Parse the JSON `phases` array.
@@ -141,7 +141,7 @@ Exit cleanly.
 **Fetch details for each phase:**
 
 ```bash
-DETAIL=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+DETAIL=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
 ```
 
 Extract `phase_name`, `goal`, `success_criteria` from each. Store for use in execute_phase and transition messages.
@@ -169,7 +169,7 @@ Where N = current phase number (from the ROADMAP, e.g., 63), T = total milestone
 Check if CONTEXT.md already exists for this phase:
 
 ```bash
-PHASE_STATE=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse `has_context` from JSON.
@@ -185,7 +185,7 @@ Proceed to 3b.
 **If has_context is false:** Check if discuss is disabled via settings:
 
 ```bash
-SKIP_DISCUSS=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.skip_discuss 2>/dev/null || echo "false")
+SKIP_DISCUSS=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.skip_discuss 2>/dev/null || echo "false")
 ```
 
 **If SKIP_DISCUSS is `true`:** Skip discuss entirely — the ROADMAP phase description is the spec. Display:
@@ -197,7 +197,7 @@ Phase ${PHASE_NUM}: Discuss skipped (workflow.skip_discuss=true) — using ROADM
 Write a minimal CONTEXT.md so downstream plan-phase has valid input. Get phase details:
 
 ```bash
-DETAIL=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+DETAIL=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
 ```
 
 Extract `goal` and `requirements` from JSON. Write `${phase_dir}/${padded_phase}-CONTEXT.md` with:
@@ -249,7 +249,7 @@ None — discuss phase skipped.
 Commit the minimal context:
 
 ```bash
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): auto-generated context (discuss skipped)" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): auto-generated context (discuss skipped)" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
 
 Proceed to 3b.
@@ -270,7 +270,7 @@ Skill(skill="gsd:discuss-phase", args="${PHASE_NUM}")
 After discuss completes (either mode), verify context was written:
 
 ```bash
-PHASE_STATE=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Check `has_context`. If false → go to handle_blocker: "Discuss for phase ${PHASE_NUM} did not produce CONTEXT.md."
@@ -280,7 +280,7 @@ Check `has_context`. If false → go to handle_blocker: "Discuss for phase ${PHA
 Check if this phase has frontend indicators and whether a UI-SPEC already exists:
 
 ```bash
-PHASE_SECTION=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM} 2>/dev/null)
+PHASE_SECTION=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM} 2>/dev/null)
 echo "$PHASE_SECTION" | grep -iE "UI|interface|frontend|component|layout|page|screen|view|form|dashboard|widget" > /dev/null 2>&1
 HAS_UI=$?
 UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
@@ -289,7 +289,7 @@ UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
 Check if UI phase workflow is enabled:
 
 ```bash
-UI_PHASE_CFG=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
+UI_PHASE_CFG=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_phase 2>/dev/null || echo "true")
 ```
 
 **If `HAS_UI` is 0 (frontend indicators found) AND `UI_SPEC_FILE` is empty (no UI-SPEC exists) AND `UI_PHASE_CFG` is not `false`:**
@@ -356,6 +356,27 @@ Store the agent task_id. The workflow can now start discussing the next phase wh
 Skill(skill="gsd-execute-phase", args="${PHASE_NUM} --no-transition")
 ```
 
+**3c.5. Code Review and Fix**
+
+Auto-invoke code review and fix chain. Autonomous mode chains both review and fix (unlike execute-phase/quick which only suggest fix).
+
+**Config gate:**
+```bash
+CODE_REVIEW_ENABLED=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.code_review 2>/dev/null || echo "true")
+```
+If `"false"`: display "Code review skipped (workflow.code_review=false)" and proceed to 3d.
+
+```
+Skill(skill="gsd:code-review", args="${PHASE_NUM}")
+```
+
+Parse status from REVIEW.md frontmatter. If "clean" or "skipped": proceed to 3d. If findings found: auto-invoke:
+```
+Skill(skill="gsd:code-review-fix", args="${PHASE_NUM} --auto")
+```
+
+**Error handling:** If either Skill fails, catch the error, display as non-blocking, and proceed to 3d.
+
 **3d. Post-Execution Routing**
 
 **If `INTERACTIVE` is set:** Wait for the execute agent to complete before reading verification results.
@@ -369,7 +390,7 @@ VERIFY_STATUS=$(grep "^status:" "${PHASE_DIR}"/*-VERIFICATION.md 2>/dev/null | h
 Where `PHASE_DIR` comes from the `init phase-op` call already made in step 3a. If the variable is not in scope, re-fetch:
 
 ```bash
-PHASE_STATE=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse `phase_dir` from the JSON.
@@ -463,7 +484,7 @@ UI_SPEC_FILE=$(ls "${PHASE_DIR}"/*-UI-SPEC.md 2>/dev/null | head -1)
 Check if UI review is enabled:
 
 ```bash
-UI_REVIEW_CFG=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_review 2>/dev/null || echo "true")
+UI_REVIEW_CFG=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" config-get workflow.ui_review 2>/dev/null || echo "true")
 ```
 
 **If `UI_SPEC_FILE` is not empty AND `UI_REVIEW_CFG` is not `false`:**
@@ -495,7 +516,7 @@ Run smart discuss for the current phase. Proposes grey area answers in batch tab
 **Inputs:** `PHASE_NUM` from execute_phase. Run init to get phase paths:
 
 ```bash
-PHASE_STATE=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
+PHASE_STATE=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init phase-op ${PHASE_NUM})
 ```
 
 Parse from JSON: `phase_dir`, `phase_slug`, `padded_phase`, `phase_name`.
@@ -584,7 +605,7 @@ Read the 3-5 most relevant files to understand existing patterns.
 **Get phase details:**
 
 ```bash
-DETAIL=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
+DETAIL=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase ${PHASE_NUM})
 ```
 
 Extract `goal`, `requirements`, `success_criteria` from the JSON response.
@@ -756,7 +777,7 @@ Write the file.
 **Commit:**
 
 ```bash
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): smart discuss context" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs(${PADDED_PHASE}): smart discuss context" --files "${phase_dir}/${padded_phase}-CONTEXT.md"
 ```
 
 Display confirmation:
@@ -784,7 +805,7 @@ Decisions captured: {count} across {area_count} areas
  Completed through phase ${TO_PHASE} as requested.
  Remaining phases were not executed.
 
- Resume with: /gsd:autonomous --from ${next_incomplete_phase}
+ Resume with: /gsd-autonomous --from ${next_incomplete_phase}
 ```
 
 Proceed directly to lifecycle step (which handles partial completion — skips audit/complete/cleanup since not all phases are done). Exit cleanly.
@@ -792,7 +813,7 @@ Proceed directly to lifecycle step (which handles partial completion — skips a
 **Otherwise:** After each phase completes, re-read ROADMAP.md to catch phases inserted mid-execution (decimal phases like 5.1):
 
 ```bash
-ROADMAP=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
+ROADMAP=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze)
 ```
 
 Re-filter incomplete phases using the same logic as discover_phases:

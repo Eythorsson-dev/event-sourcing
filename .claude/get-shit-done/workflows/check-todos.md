@@ -12,7 +12,7 @@ Read all files referenced by the invoking prompt's execution_context before star
 Load todo context:
 
 ```bash
-INIT=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" init todos)
+INIT=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" init todos)
 if [[ "$INIT" == @file:* ]]; then INIT=$(cat "${INIT#@file:}"); fi
 ```
 
@@ -155,7 +155,7 @@ If todo was moved to done/, commit the change:
 
 ```bash
 git rm --cached .planning/todos/pending/[filename] 2>/dev/null || true
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: start work on todo - [title]" --files .planning/todos/completed/[filename] .planning/STATE.md
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" commit "docs: start work on todo - [title]" --files .planning/todos/completed/[filename] .planning/STATE.md
 ```
 
 Tool respects `commit_docs` config and gitignore automatically.
