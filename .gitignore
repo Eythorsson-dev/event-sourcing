@@ -1,0 +1,6 @@
+# Rust build artifacts
+target/
+
+# Claude Code tooling
+.claude/worktrees/
+event-sourcing/src/claude-prompt-*.md
