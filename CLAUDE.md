@@ -124,6 +124,14 @@ README.md is written for curious developers who want to know what this library i
 Architecture not yet mapped. Follow existing patterns found in the codebase.
 <!-- GSD:architecture-end -->
 
+## Session Setup
+
+At the start of every new session, run the following command to ensure GSD is installed and up to date:
+
+```
+npx get-shit-done-cc@latest
+```
+
 <!-- GSD:workflow-start source:GSD defaults -->
 ## GSD Workflow Enforcement
 
