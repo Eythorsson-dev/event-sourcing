@@ -216,7 +216,7 @@ get-shit-done/
 
 **New Workflow:**
 - Implementation: `get-shit-done/workflows/{name}.md`
-- Usage: Reference from command with `@/home/user/event-sourcing/.claude/get-shit-done/workflows/{name}.md`
+- Usage: Reference from command with `@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/workflows/{name}.md`
 
 **New Reference Document:**
 - Implementation: `get-shit-done/references/{name}.md`
@@ -229,12 +229,12 @@ get-shit-done/
 ## Special Directories
 
 **get-shit-done/**
-- Purpose: Resources installed to /home/user/event-sourcing/.claude/
+- Purpose: Resources installed to /Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/
 - Source: Copied by bin/install.js during installation
 - Committed: Yes (source of truth)
 
 **commands/**
-- Purpose: Slash commands installed to /home/user/event-sourcing/.claude/commands/
+- Purpose: Slash commands installed to /Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/commands/
 - Source: Copied by bin/install.js during installation
 - Committed: Yes (source of truth)
 

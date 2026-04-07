@@ -20,8 +20,15 @@ Your job: Goal-backward verification. Start from what the phase SHOULD deliver, 
 If the prompt contains a `<files_to_read>` block, you MUST use the `Read` tool to load every file listed there before performing any other actions. This is your primary context.
 
 **Critical mindset:** Do NOT trust SUMMARY.md claims. SUMMARYs document what Claude SAID it did. You verify what ACTUALLY exists in the code. These often differ.
+
 </role>
 
+<required_reading>
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/verification-overrides.md
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/gates.md
+</required_reading>
+
+This agent implements the **Escalation Gate** pattern (surfaces unresolvable gaps to the developer for decision).
 <project_context>
 Before verifying, discover project context:
 
@@ -53,6 +60,12 @@ Then verify each level against the actual codebase.
 
 <verification_process>
 
+At verification decision points, apply structured reasoning:
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/thinking-models-verification.md
+
+At verification decision points, reference calibration examples:
+@/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/references/few-shot-examples/verifier.md
+
 ## Step 0: Check for Previous Verification
 
 ```bash
@@ -78,7 +91,7 @@ Set `is_re_verification = false`, proceed with Step 1.
 ```bash
 ls "$PHASE_DIR"/*-PLAN.md 2>/dev/null
 ls "$PHASE_DIR"/*-SUMMARY.md 2>/dev/null
-node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "$PHASE_NUM"
+node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "$PHASE_NUM"
 grep -E "^| $PHASE_NUM" .planning/REQUIREMENTS.md 2>/dev/null
 ```
 
@@ -91,7 +104,7 @@ In re-verification mode, must-haves come from Step 0.
 **Step 2a: Always load ROADMAP Success Criteria**
 
 ```bash
-PHASE_DATA=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "$PHASE_NUM" --raw)
+PHASE_DATA=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap get-phase "$PHASE_NUM" --raw)
 ```
 
 Parse the `success_criteria` array from the JSON output. These are the **roadmap contract** — they must always be verified regardless of what PLAN frontmatter says. Store them as `roadmap_truths`.
@@ -154,14 +167,49 @@ For each truth:
 1. Identify supporting artifacts
 2. Check artifact status (Step 4)
 3. Check wiring status (Step 5)
-4. Determine truth status
+4. **Before marking FAIL:** Check for override (Step 3b)
+5. Determine truth status
+
+## Step 3b: Check Verification Overrides
+
+Before marking any must-have as FAILED, check the VERIFICATION.md frontmatter for an `overrides:` entry that matches this must-have.
+
+**Override check procedure:**
+
+1. Parse `overrides:` array from VERIFICATION.md frontmatter (if present)
+2. For each override entry, normalize both the override `must_have` and the current truth to lowercase, strip punctuation, collapse whitespace
+3. Split into tokens and compute intersection — match if 80% token overlap in either direction
+4. Key technical terms (file paths, component names, API endpoints) have higher weight
+
+**If override found:**
+- Mark as `PASSED (override)` instead of FAIL
+- Evidence: `Override: {reason} — accepted by {accepted_by} on {accepted_at}`
+- Count toward passing score, not failing score
+
+**If no override found:**
+- Mark as FAILED as normal
+- Consider suggesting an override if the failure looks intentional (alternative implementation exists)
+
+**Suggesting overrides:** When a must-have FAILs but evidence shows an alternative implementation that achieves the same intent, include an override suggestion in the report:
+
+```markdown
+**This looks intentional.** To accept this deviation, add to VERIFICATION.md frontmatter:
+
+```yaml
+overrides:
+  - must_have: "{must-have text}"
+    reason: "{why this deviation is acceptable}"
+    accepted_by: "{name}"
+    accepted_at: "{ISO timestamp}"
+```
+```
 
 ## Step 4: Verify Artifacts (Three Levels)
 
 Use gsd-tools for artifact verification against must_haves in PLAN frontmatter:
 
 ```bash
-ARTIFACT_RESULT=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" verify artifacts "$PLAN_PATH")
+ARTIFACT_RESULT=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" verify artifacts "$PLAN_PATH")
 ```
 
 Parse JSON result: `{ all_passed, passed, total, artifacts: [{path, exists, issues, passed}] }`
@@ -267,7 +315,7 @@ Key links are critical connections. If broken, the goal fails even with all arti
 Use gsd-tools for key link verification against must_haves in PLAN frontmatter:
 
 ```bash
-LINKS_RESULT=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" verify key-links "$PLAN_PATH")
+LINKS_RESULT=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" verify key-links "$PLAN_PATH")
 ```
 
 Parse JSON result: `{ all_verified, verified, total, links: [{from, to, via, verified, detail}] }`
@@ -349,12 +397,12 @@ Identify files modified in this phase from SUMMARY.md key-files section, or extr
 
 ```bash
 # Option 1: Extract from SUMMARY frontmatter
-SUMMARY_FILES=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" summary-extract "$PHASE_DIR"/*-SUMMARY.md --fields key-files)
+SUMMARY_FILES=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" summary-extract "$PHASE_DIR"/*-SUMMARY.md --fields key-files)
 
 # Option 2: Verify commits exist (if commit hashes documented)
 COMMIT_HASHES=$(grep -oE "[a-f0-9]{7,40}" "$PHASE_DIR"/*-SUMMARY.md | head -10)
 if [ -n "$COMMIT_HASHES" ]; then
-  COMMITS_VALID=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" verify commits $COMMIT_HASHES)
+  COMMITS_VALID=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" verify commits $COMMIT_HASHES)
 fi
 
 # Fallback: grep for files
@@ -468,7 +516,7 @@ Before reporting gaps, check if any identified gaps are explicitly addressed in 
 **Load the full milestone roadmap:**
 
 ```bash
-ROADMAP_DATA=$(node "/home/user/event-sourcing/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze --raw)
+ROADMAP_DATA=$(node "/Users/eythorsson/Documents/Git/event-sourcing/.claude/worktrees/phase-4/.claude/get-shit-done/bin/gsd-tools.cjs" roadmap analyze --raw)
 ```
 
 Parse the JSON to extract all phases. Identify phases with `number > current_phase_number` (later phases in the milestone). For each later phase, extract its `goal` and `success_criteria`.
@@ -541,6 +589,12 @@ phase: XX-name
 verified: YYYY-MM-DDTHH:MM:SSZ
 status: passed | gaps_found | human_needed
 score: N/M must-haves verified
+overrides_applied: 0 # Count of PASSED (override) items included in score
+overrides: # Only if overrides exist — carried forward or newly added
+  - must_have: "Must-have text that was overridden"
+    reason: "Why deviation is acceptable"
+    accepted_by: "username"
+    accepted_at: "ISO timestamp"
 re_verification: # Only if previous VERIFICATION.md existed
   previous_status: gaps_found
   previous_score: 2/5
