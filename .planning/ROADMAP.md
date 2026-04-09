@@ -13,7 +13,7 @@
 - [ ] **Phase 2: In-Memory Log Store** - Working in-memory LogStore implementation that serves as test harness for all subsequent phases
 - [ ] **Phase 3: Event Log and Optimistic Concurrency** - EventLog orchestrator with append cycle, per-stream sequencing, and atomic optimistic concurrency
 - [ ] **Phase 03.1: DCB Model Revision** - Tag-based event classification replacing stream identity
-- [ ] **Phase 03.2: KeyedTag and TagFilter** - Expressive tag scoping for projection definitions and append conditions
+- [ ] **Phase 03.2: TagFilter** - Expressive tag scoping for projection definitions and append conditions
 - [ ] **Phase 4: Projection Engine — Single-Stream** - Single-stream projection fold, JSON-serializable ProjectionDefinition, and builder API
 - [ ] **Phase 5: Projection Engine — Multi-Stream and Catch-Up** - Multi-stream joins, unified engine for read models and constraints, and inline catch-up reads
 - [ ] **Phase 6: Constraint Validation** - Constraint types wired into the append cycle, single-stream and multi-stream invariants
@@ -83,15 +83,14 @@ Plans:
 - [x] 03.1-01-PLAN.md — Core type revision: Tag, Query, revised StoredEvent/AppendCondition/LogStore/EventLog + EventStreamExt
 - [x] 03.1-02-PLAN.md — InMemoryLogStore rewrite for flat tag-based model with query filtering and condition checks
 
-### Phase 03.2: KeyedTag and TagFilter — Expressive Tag Scoping (INSERTED)
+### Phase 03.2: TagFilter — Expressive Tag Scoping (INSERTED)
 
-**Goal:** Introduce `KeyedTag` and `TagFilter` to replace exact-match `HashSet<Tag>` in `Criterion` — giving projections and append conditions an expressive filter that supports `equals`, `starts_with`, `ends_with`, `and`, `or`, so that a `ProjectionDefinition` can declare which stored events belong to which projection instance
+**Goal:** Introduce `TagFilter` to replace exact-match `HashSet<Tag>` in `Criterion` — giving projections and append conditions an expressive filter that supports `equals`, `starts_with`, `ends_with`, `and`, `or`, so that a `ProjectionDefinition` can declare which stored events belong to which projection instance
 **Depends on:** Phase 03.1
 **Requirements**: LOG-04, LOG-05 (extension of query model)
 **Success Criteria** (what must be TRUE):
-  1. `KeyedTag` struct with `key: String` and `value: String` fields compiles, implements `Into<Tag>` (produces `"key:value"` string), and is exported from the core crate
-  2. `TagFilter` enum with variants `Equals(Tag)`, `StartsWith(String)`, `EndsWith(String)`, `And(Vec<TagFilter>)`, `Or(Vec<TagFilter>)` compiles and serializes to/from JSON
-  3. `Criterion` replaces `tags: HashSet<Tag>` with `tag_filter: Option<TagFilter>`; builder/constructor accepts `impl Into<Tag>` for the `Equals` case so existing call sites need minimal changes
+  1. `TagFilter` enum with variants `Equals(Tag)`, `StartsWith(String)`, `EndsWith(String)`, `And(Vec<TagFilter>)`, `Or(Vec<TagFilter>)` compiles and serializes to/from JSON
+  2. `Criterion` replaces `tags: HashSet<Tag>` with `tag_filter: Option<TagFilter>`; `None` means no tag filter (match-any), preserving current behaviour for call sites that don't need tag scoping
   4. `InMemoryLogStore` evaluates `TagFilter` correctly when matching stored events against query criteria — `starts_with("order:")` matches `order:o1` and `order:o2` but not `product:p1`
   5. All tests from Phases 01–03.1 pass without modification — the change is backwards-compatible for exact-match use cases
   6. `AppendCondition.query` continues to express per-instance consistency checks using `TagFilter::Equals`
