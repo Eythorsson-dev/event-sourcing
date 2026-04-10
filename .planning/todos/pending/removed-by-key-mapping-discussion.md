@@ -2,52 +2,24 @@
 title: Discuss removed_by key mapping before planning Phase 4
 area: projection-macro
 created: 2026-04-06
-status: pending
+status: resolved
+resolved: 2026-04-09
 ---
 
-# removed_by key mapping — open decisions
+# removed_by key mapping — RESOLVED
 
-The `removed_by` syntax on list fields needs a design decision before Phase 4 can be planned. The syntax direction is settled (`removed_by: o.ItemRemoved.item_id | o.ItemArchived.item_id`), but several edge cases are unresolved.
+Resolved during Phase 4 discuss-phase session 2026-04-09.
 
-## Open questions
+## Decisions
 
-### 1. Composite keys
-If a list has composite keys `items[order_id, item_id]`, how does `removed_by` declare the mapping?
+- `removed_by` lives inside the list block (correct placement — it is a list-level control operation)
+- Syntax: `removed_by: EventType | OtherEvent` — event type names only, no field paths
+- Engine matches removal events to items via `$tags` key: the removal event must carry the same tag prefix as the list's `key` declaration
+- Fallback for non-DCB events: `removed_by: o.EventType on $.item_id` — explicit field path
 
-```
--- Option A: all key fields on one line
-removed_by: o.ItemRemoved.order_id + o.ItemRemoved.item_id
+## Composite keys
 
--- Option B: separate line per key field
-removed_by: o.ItemRemoved { order_id, item_id }
+Resolved: `key: $tags.order, $tags.item` for composite tag-based keys.
+Field fallback: `key: { fields: ["$.order_id", "$.item_id"] }`.
 
--- Option C: positional (order must match key declaration order)
-removed_by: o.ItemRemoved.order_id | o.ItemRemoved.item_id
-```
-
-### 2. Events from joined streams
-Can an event from a joined stream trigger removal?
-
-```
--- Example: product discontinued removes all items linked to it
-items[id] {
-    removed_by: o.ItemRemoved.item_id
-               | p.ProductDiscontinued.product_id  -- joined stream event
-}
-```
-
-The joined stream's key path may not match the item key field — requires a resolution mapping.
-
-### 3. Conditional removal
-Should removal ever be conditional (e.g., "remove only if quantity drops to 0")? Or is removal always unconditional?
-
-Current assumption: unconditional. Worth confirming.
-
-### 4. Remove vs soft-delete
-Should `removed_by` hard-delete (remove from list in state) or soft-delete (set a field to indicate removed, keep in list)? Current assumption: hard-delete. Soft-delete is application concern.
-
-## Context
-
-Raised during discuss-phase session 2026-04-06 (Phase 4 projection macro discussion).
-Current pipe syntax: `removed_by: o.ItemRemoved.item_id | o.ItemArchived.item_id`
-This must be resolved before Phase 4 planning to avoid changing the JSON schema mid-implementation.
+See Phase 4 CONTEXT.md D-27 and DSL settled rules.
