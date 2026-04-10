@@ -3,16 +3,51 @@
 **Gathered:** 2026-04-09, updated 2026-04-10
 **Status:** Partial — join design captured and revised from Phase 4/5 discussion sessions. Requires `/gsd-discuss-phase 05` before planning to cover catch-up reads and remaining details.
 
+<open_questions>
+## Open Questions
+
+### OQ-01: `$tags` vs `tag_starting_with()` for implicit join resolution and list keys
+
+Two approaches are on the table. The choice affects ergonomics, read model state shape, and how the multi-role same-prefix edge case is handled.
+
+**Option A — Keep `$tags` (implicit accumulation)**
+- The engine accumulates tag values into a `$tags` map as events are processed: `item:i1` → `$tags["item"] = "i1"`.
+- List keys: `key: $tags.item` — reads from accumulated state.
+- Join resolution: implicit — engine reads `$tags["product"]` to resolve the `p` join alias. No declaration needed beyond the join itself.
+- `$tags` is user-visible in the read model JSON as a reserved key (or kept internal-only).
+- Ergonomic for the common case. Problem only when two join aliases share the same `StartsWith` prefix and need different stream instances — then `for EventType` is needed as an explicit override.
+
+**Option B — Drop `$tags`, use `tag_starting_with()` (per-event extraction)**
+- No accumulated state. Tag values extracted from the current event at processing time.
+- List keys: `key: { tag_starting_with: "item:" }` — extracts suffix `"i1"` from `"item:i1"` on the arriving event.
+- Join resolution: requires explicit `for EventType` or `on $.field` on every join — no implicit resolution.
+- Read model state is clean — only explicitly projected fields, no reserved keys.
+- More verbose. `for EventType` must be declared for every join.
+
+**Option C — `$tags` internal only, `tag_starting_with()` for field access**
+- Engine tracks tag values internally per prefix (same as Option A) for implicit join resolution.
+- `$tags` is NOT exposed in the read model JSON — no reserved key visible to the developer.
+- List keys and projected fields use `tag_starting_with()` / `tag_ending_with()` to extract tag values explicitly when needed.
+- `for EventType` available as an override for the same-prefix multi-alias edge case.
+- Ergonomic default (like A) with clean state (like B). The scalar assumption exists internally.
+
+**Key facts established:**
+- `$tags` scalar assumption (latest wins per prefix) only breaks when two join aliases share the same `StartsWith` prefix and each needs a different stream instance. For all other cases, latest-wins is correct behaviour (it handles key changes via replay).
+- `for EventType` solves the same-prefix multi-alias case cleanly regardless of which option is chosen for the default.
+- The practical difference between Option A and B is mostly where the scalar value lives: accumulated engine state vs. extracted per-event. Both produce the same result in the common case.
+
+**Decision needed before planning Phase 5.**
+
+</open_questions>
+
 <domain>
 ## Phase Boundary
 
-Extend the projection engine with multi-stream joins, list-level joins, event-scoped join resolution (`for EventType`), and inline catch-up reads. The single-stream engine from Phase 4 is the foundation — this phase adds the `joins` block at root and list levels, and implements the runtime mechanics of join resolution, replay, and cycle detection.
+Extend the projection engine with multi-stream joins, list-level joins, and inline catch-up reads. The single-stream engine from Phase 4 is the foundation — this phase adds the `joins` block at root and list levels, and implements the runtime mechanics of join resolution, replay, and cycle detection.
 
-`$tags` as an accumulated magic map in read model state has been dropped (see D-04 to D-07). Tag values are extracted from the current event at processing time using `tag_starting_with()` / `tag_ending_with()` expressions. Read model state contains only explicitly projected fields.
+The `$tags` / `tag_starting_with()` design choice (OQ-01) affects the list key syntax, join resolution mechanics, and whether the read model state carries a reserved `$tags` key. That question must be resolved before planning.
 
 **Depends on:** Phase 4 (single-stream engine, `TagFilter`, `ProjectionDefinition.query`)
-
-> **Note:** Phase 4 context decisions D-34–D-36 (`$tags` population) are superseded by D-04–D-07 in this document.
 
 </domain>
 
