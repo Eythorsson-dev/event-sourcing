@@ -127,13 +127,13 @@ Phase 4 scope: **single-stream projections only**. No joins — those are Phase 
 
 ### ProjectionDefinition JSON Schema
 
-The authoritative schema. Phase 4 implements the `from` + `fields` subset. Phase 5 adds `joins` at root and list levels, and `join` on fields.
+The authoritative schema. Phase 4 implements the `query` + `fields` subset. Phase 5 adds `joins` at root and list levels, and `join` on fields.
 
 **Phase 4 schema (implementable now):**
 ```json
 {
   "name": "ProjectionName",
-  "from": "stream-type",
+  "query": { "StartsWith": "order:" },
   "fields": {
     "scalar_field": {
       "required": true,
@@ -152,12 +152,12 @@ The authoritative schema. Phase 4 implements the `from` + `fields` subset. Phase
     },
     "list_field": {
       "type": "list",
-      "keys": { "key_field_name": "$.json_path_to_key" },
+      "key": "$tags.item",
       "remove_on": ["EventThatRemovesItem"],
       "fields": {
-        "key_field_name": {
+        "some_item_field": {
           "required": true,
-          "events": { "ItemAdded": { "from": "$.key_field" } }
+          "events": { "ItemAdded": { "from": "$.field" } }
         },
         "other_item_field": {
           "events": {
@@ -173,17 +173,26 @@ The authoritative schema. Phase 4 implements the `from` + `fields` subset. Phase
 
 Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` — the validator resolves it from the referenced `EventSchemaDef` (D-16).
 
+List `key` can also use a payload field path as a fallback for non-DCB events: `"key": { "field": "$.item_id" }`.
+
 **Phase 5 extension (design locked, not implemented in Phase 4):**
 ```json
 {
+  "query": { "StartsWith": "order:" },
   "joins": {
-    "alias": { "stream": "stream-type", "on": "$.state_field_path" }
+    "p": { "query": { "StartsWith": "product:" } }
   },
   "fields": {
-    "join_only_field": {
-      "join": {
-        "alias": {
-          "JoinedEvent": { "from": "$.name" }
+    "list_field": {
+      "type": "list",
+      "key": "$tags.item",
+      "joins": {
+        "p": { "query": { "StartsWith": "product:" } }
+      },
+      "fields": {
+        "name": {
+          "events": { "ItemAdded": { "from": "$.name" } },
+          "join": { "p": { "ProductUpdated": { "from": "$.name" } } }
         }
       }
     }
@@ -193,7 +202,7 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
 
 ### Schema Design Rules
 
-- **D-23:** `from` — root stream type name. All events without a `join` reference come from this stream.
+- **D-23:** `query` — replaces `from`. A `TagFilter` (same type used in `AppendCondition.query`) describing which events this projection operates on. For single-stream projections: `{ "StartsWith": "order:" }`. The engine does not fetch events itself — the caller uses this field to construct their `LogStore::query` call, adding instance-specific tags at runtime.
 - **D-24:** `events` is always an **object** with event type names as keys (not an array). Values are handler objects.
 - **D-25:** Handler operation vocabulary (exhaustive for Phase 4):
   - `{ "from": "$.path" }` — copy field from event payload via JSON Path
@@ -203,9 +212,17 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
   - `{ "increment_by": "$.path" }` — add the value at path to a numeric field
   - `{ "decrement_by": "$.path" }` — subtract the value at path from a numeric field
 - **D-26:** `required: true` → the Rust struct field is `T` (not `Option<T>`); deserialization fails if null. `required: false` (default) → `Option<T>`. `default` sets the initial state value before any events — a `required` field with a `default` starts populated.
-- **D-27:** List `keys` is an **object** where field names map to their JSON Path in the event payload. The engine uses these paths for ALL list operations (upsert key resolution and remove). Supports composite keys (multiple entries in the object).
-- **D-28:** List upsert is implicit — any event that appears in any list item field's `events` triggers an upsert for that item. `remove_on` is an explicit array of event type names. Both use the `keys` paths for key extraction.
+- **D-27:** List `key` declares how the engine identifies items for upsert and removal. Two forms:
+  - Tag-based (preferred in DCB model): `"key": "$tags.item"` — key is the value of the `item:` prefix in the event's tags. Composite: `"key": ["$tags.order", "$tags.item"]`.
+  - Field-based (fallback for non-DCB events): `"key": { "field": "$.item_id" }` — key extracted from event payload path. Composite: `"key": { "fields": ["$.order_id", "$.item_id"] }`.
+- **D-28:** List upsert is implicit — any event appearing in any list item field's `events` triggers an upsert. `remove_on` is an explicit array of event type names. The engine uses the `key` declaration for both upsert identity and removal matching.
 - **D-29:** JSON Path uses `$.` prefix for event payload references. Supports nested paths (`$.address.city`).
+
+### $tags on Read Model Objects
+
+- **D-34:** Every projection root object and every list item automatically gets a `$tags` map populated from the tags of events that affected it. This is implicit — the user does not need to declare a `$tags` field.
+- **D-35:** `$tags` stores the **current** value per tag prefix group, not a historical union. When a new event arrives carrying tag `product:p2` for an item that previously had `product:p1`, the `$tags.product` entry is updated to `"p2"`. The `$tags` map always reflects the latest identity of the object.
+- **D-36:** `$tags` is available to the projection engine for key resolution and join resolution (Phase 5). It is also available in the serialized `serde_json::Value` state for inspection. The field name `$tags` is reserved and cannot be used as a user-declared field name.
 
 ### ProjectionObserver (Phase 7 Design Note)
 
@@ -218,14 +235,12 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
 
 The `projection!` macro is a **query language**, not a Rust-mimicking DSL. It does not try to look like Rust. Design is informed by SQL, GraphQL, and pipe-based languages.
 
-**Settled syntax (Proposal H):**
+**Settled syntax (Proposal H — updated for tag model):**
 
+Phase 4 (single-stream):
 ```
 projection OrderView {
-    from "orders" o
-    join "products" p on product_id
-
-    product_id: o.OrderPlaced.product_id
+    query tag.starts_with("order:") as o
 
     status:  o.OrderPlaced.status
            | o.OrderCancelled = "cancelled"
@@ -236,21 +251,35 @@ projection OrderView {
           |- o.ItemRemoved.price_cents
           |? 0
 
-    items[id] {
-        removed_by: o.ItemRemoved.item_id
-                  | o.ItemArchived.item_id
+    items {
+        key: $tags.item
+        removed_by: o.ItemRemoved | o.ItemArchived
 
-        id:         o.ItemAdded.item_id
-        name:       o.ItemAdded.name
-                  | p.ProductUpdated.name
-        quantity:   o.ItemAdded.quantity
-                  |+ o.ItemUpdated.delta
-                  |? 0
-        note?:      o.ItemNoteAdded.text
+        name:     o.ItemAdded.name
+        quantity: o.ItemAdded.quantity
+                |+ o.ItemUpdated.delta
+                |? 0
+        note?:    o.ItemNoteAdded.text
+    }
+}
+```
+
+Phase 5 extension (design locked, not implemented in Phase 4):
+```
+projection OrderView {
+    query tag.starts_with("order:") as o
+    join tag.starts_with("product:") as p    // on implicit: $tags.product
+
+    items {
+        key: $tags.item
+        join tag.starts_with("product:") as p  // list-level join; on implicit: $tags.product
+        removed_by: o.ItemRemoved | o.ItemArchived
+
+        name:     o.ItemAdded.name | p.ProductUpdated.name
+        quantity: o.ItemAdded.quantity |+ o.ItemUpdated.delta |? 0
     }
 
-    product_name?: p.ProductUpdated.name
-                 |? "unknown"
+    product_name?: p.ProductUpdated.name |? "unknown"
 }
 ```
 
@@ -259,15 +288,18 @@ projection OrderView {
 - `|` — pipe: on this event, assign. `|+` increment. `|-` decrement. `|?` default (always last).
 - `o.EventType.field` — event field reference via stream alias + event type + field name.
 - `o.EventType = "literal"` — literal value assignment from a specific event.
-- `|+ o.Event.field` and `o.Event += field` are aliases.
 - Required and default are independent: `|? value` sets initial state regardless of `?:` suffix.
 - `{}` appears only on list fields, not on scalar fields.
-- `from "stream" alias` and `join "stream" alias on state_field` with SQL-style aliases.
+- `query tag.starts_with("X:") as alias` declares the primary stream. Alias used to reference events.
+- `key: $tags.X` — list item key from tag prefix. `key: $tags.X, $tags.Y` for composite keys.
+- `key: $.field` — list item key from event payload field (fallback for non-DCB events).
+- `removed_by: EventType | OtherEvent` — event type names only; engine matches via item's `$tags` key. Fallback with explicit field: `removed_by: o.EventType on $.item_id`.
+- `join tag.starts_with("X:") as alias` — Phase 5. `on` implicit from prefix via `$tags`. Explicit `on $.field` available for non-DCB events.
 
-**Open — must discuss before planning:**
-- `removed_by` placement feels off — needs rethinking (currently inside the list block, but its placement and syntax are unsettled). Tracked in `.planning/todos/pending/removed-by-key-mapping-discussion.md`.
-- Joins inside list fields — how a joined stream event upserts/updates items within a list.
-- Composite list keys — syntax for `items[order_id, item_id]`.
+**Resolved items (previously open):**
+- `removed_by` syntax: event type names only (tag-based key). Placement inside list block is correct — it is a list-level control operation. Field-path syntax available as fallback.
+- Composite list keys: `key: $tags.order, $tags.item` (tag-based) or `key: { fields: ["$.order_id", "$.item_id"] }` (field-based).
+- Joins inside list fields: list-level `join` block (Phase 5). Design locked above.
 
 **Deferred to Phase 10:**
 - GROUP BY and window functions in the DSL (Phase 10 covers both the JSON schema extension and the query language surface).
@@ -290,9 +322,8 @@ projection OrderView {
 **Downstream agents MUST read these before planning or implementing.**
 
 ### Prior Phase Contracts
-- `.planning/phases/01-workspace-setup-and-core-types/01-CONTEXT.md` — Core types: `StoredEvent`, `StreamId`, sequence ID types, `serde_json::Value` payload (D-07), `event_type: String` on every event (D-08). **Note: Phase 03.1 may revise these — check 03.1-CONTEXT.md once available.**
-- `.planning/phases/03-event-log-and-optimistic-concurrency/03-CONTEXT.md` — `EventLog<S>` API: callers read streams via `EventLog::read_stream`, results passed to `ProjectionEngine::project`. Phase 4 extends `EventLog` to `EventLog<S, E>` with `EventSchemaStore`.
-- `.planning/phases/03.1-dcb-model-revision-storedevent-streamid-and-sequence-id-accuracy/` — **Must be planned and implemented before Phase 4.** Authoritative source for the correct `StoredEvent` structure.
+- `.planning/phases/03.1-dcb-model-revision-storedevent-streamid-and-sequence-id-accuracy/03.1-CONTEXT.md` — Authoritative source for `StoredEvent`, `Tag`, `Query`, `Criterion`, `AppendCondition`, `LogStore` trait.
+- `.planning/phases/03.2-keyed-tag-and-tag-filter/03.2-CONTEXT.md` — **Must be implemented before Phase 4.** Defines `TagFilter` enum (`Equals`, `StartsWith`, `EndsWith`, `And`, `Or`) and `Criterion.tag_filter: Option<TagFilter>`. `ProjectionDefinition.query` uses this type.
 
 ### Requirements
 - `.planning/REQUIREMENTS.md` — PROJ-01, PROJ-03, PROJ-04, PROJ-06, PROJ-07, PROJ-08 are the requirements for this phase.
