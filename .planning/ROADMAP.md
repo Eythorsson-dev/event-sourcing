@@ -14,7 +14,8 @@
 - [ ] **Phase 3: Event Log and Optimistic Concurrency** - EventLog orchestrator with append cycle, per-stream sequencing, and atomic optimistic concurrency
 - [ ] **Phase 03.1: DCB Model Revision** - Tag-based event classification replacing stream identity
 - [ ] **Phase 03.2: TagFilter** - Expressive tag scoping for projection definitions and append conditions
-- [ ] **Phase 4: Projection Engine — Single-Stream** - Single-stream projection fold, JSON-serializable ProjectionDefinition, and builder API
+- [ ] **Phase 4: Projection Engine — Single-Stream (Scalars and Nested Objects)** - Single-stream projection fold with scalar fields and nested objects, JSON-serializable ProjectionDefinition, and builder API
+- [ ] **Phase 4.1: Projection Engine — List Fields** - Keyed list collections with mutation and removal semantics (discuss before planning)
 - [ ] **Phase 5: Projection Engine — Multi-Stream and Catch-Up** - Multi-stream joins, unified engine for read models and constraints, and inline catch-up reads
 - [ ] **Phase 6: Constraint Validation** - Constraint types wired into the append cycle, single-stream and multi-stream invariants
 - [ ] **Phase 7: Observer Infrastructure** - Observer trait, three-state result, retry/backoff registry, and built-in ProjectionObserver
@@ -96,22 +97,32 @@ Plans:
   6. `AppendCondition.query` continues to express per-instance consistency checks using `TagFilter::Equals`
 **Plans**: TBD
 
-### Phase 4: Projection Engine — Single-Stream
-**Goal**: A caller can describe a single-stream projection using a DSL macro that generates the read model struct, Projection trait impl, and JSON-serializable definition — then run it over a stored stream and get back a typed result
-**Depends on**: Phase 3
+### Phase 4: Projection Engine — Single-Stream (Scalars and Nested Objects)
+**Goal**: A caller can describe a single-stream projection with scalar fields and nested objects using a DSL macro that generates the read model struct, Projection trait impl, and JSON-serializable definition — then run it over a stored stream and get back a typed result
+**Depends on**: Phase 03.2
 **Requirements**: PROJ-01, PROJ-03, PROJ-04, PROJ-06, PROJ-07, PROJ-08
 **Success Criteria** (what must be TRUE):
   1. A caller constructs a `ProjectionDefinition` via a builder API without writing raw struct literals
   2. A `ProjectionDefinition` serializes to JSON and deserializes back to an equivalent struct without data loss
-  3. `ProjectionEngine::fold` runs a single-stream projection over an ordered event set and returns a typed output value
-  4. The output shape supports nested lists and objects — not just flat key-value maps
+  3. `ProjectionEngine::project` runs a single-stream projection over an ordered event set and returns a typed output value
+  4. The output shape supports nested objects — not just flat key-value maps
   5. A `ProjectionDefinition` with an unknown field in its JSON deserializes with a clear error, not silently corrupt state
 **Plans**: TBD
 **UI hint**: no
 
+### Phase 4.1: Projection Engine — List Fields (INSERTED)
+**Goal**: A caller can declare list fields in a projection that collect, update, and remove items from a keyed collection — extending the Phase 4 scalar/object engine with list mutation semantics
+**Depends on**: Phase 4
+**Requirements**: PROJ-01 (extension)
+**Success Criteria**: TBD — open questions on list keys (OQ-DSL-02), mutation model (OQ-DSL-03), and removal semantics (OQ-DSL-01) must be resolved during discussion before success criteria can be defined
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd-discuss-phase 4.1 to resolve open questions before planning)
+
 ### Phase 5: Projection Engine — Multi-Stream and Catch-Up
 **Goal**: A caller can join events from multiple streams in a single projection run and read a consistent result gated on a specific global sequence ID — using the same engine as single-stream projections
-**Depends on**: Phase 4
+**Depends on**: Phase 4.1
 **Requirements**: PROJ-02, PROJ-05, LOG-08
 **Success Criteria** (what must be TRUE):
   1. A `ProjectionDefinition` can declare multiple source streams and `ProjectionEngine` folds their events in global-sequence order
