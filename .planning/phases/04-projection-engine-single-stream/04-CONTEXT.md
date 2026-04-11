@@ -8,7 +8,7 @@
 
 Build the `EventSchemaDef` type and `Event` trait (with derive macro), the `EventSchemaStore` trait, the `ProjectionDefinition` type (with builder API and JSON serialization), the `ProjectionEngine` that folds events into read model state, the `ReadModel` trait, and the `projection!` DSL macro with its `event-sourcing-macros` proc-macro crate.
 
-Phase 4 scope: **single-stream projections only**. No joins — those are Phase 5. The JSON schema is designed with joins in mind (Phase 5 extends it) but Phase 4 implements and tests only the `from` + `fields` subset.
+Phase 4 scope: **single-stream projections with scalar fields and nested objects only**. No lists — those move to a dedicated phase (Phase 4.1) where the key/mutation/removal design can mature. No joins — those are Phase 5. The JSON schema is designed with lists and joins in mind (later phases extend it) but Phase 4 implements and tests only scalar fields and nested objects.
 
 **Depends on:** Phase 03.1 (DCB model revision) — the correct `StoredEvent` structure and sequence ID model must be settled before the projection engine is built on top of it.
 
@@ -127,7 +127,7 @@ Phase 4 scope: **single-stream projections only**. No joins — those are Phase 
 
 ### ProjectionDefinition JSON Schema
 
-The authoritative schema. Phase 4 implements the `query` + `fields` subset. Phase 5 adds `joins` at root and list levels, and `join` on fields.
+The authoritative schema. Phase 4 implements `query` + scalar fields + nested objects. Phase 4.1 adds list fields (keys, mutation, removal). Phase 5 adds joins at root and list levels.
 
 **Phase 4 schema (implementable now):**
 ```json
@@ -150,18 +150,19 @@ The authoritative schema. Phase 4 implements the `query` + `fields` subset. Phas
         "ItemUpdated": { "increment_by": "$.delta" }
       }
     },
-    "list_field": {
-      "type": "list",
-      "key": "$.item_id",
+    "address": {
+      "type": "object",
       "fields": {
-        "some_item_field": {
-          "required": true,
-          "events": { "ItemAdded": { "from": "$.field" } }
-        },
-        "other_item_field": {
+        "city": {
           "events": {
-            "ItemAdded":   { "from": "$.quantity" },
-            "ItemUpdated": { "from": "$.quantity" }
+            "OrderPlaced":      { "from": "$.shipping_city" },
+            "AddressChanged":   { "from": "$.city" }
+          }
+        },
+        "postal_code": {
+          "events": {
+            "OrderPlaced":      { "from": "$.shipping_postal" },
+            "AddressChanged":   { "from": "$.postal_code" }
           }
         }
       }
@@ -175,23 +176,20 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
 **Phase 5 extension (design locked, not implemented in Phase 4):**
 ```json
 {
-  "query": { "StartsWith": "order:" },
+  "query": { "StartsWith": "customer:" },
   "joins": {
-    "p": { "query": { "StartsWith": "product:" } }
+    "u": {
+      "query": { "StartsWith": "user:" },
+      "for": ["CustomerResponsibleAssigned"]
+    }
   },
   "fields": {
-    "list_field": {
-      "type": "list",
-      "key": "$.item_id",
-      "joins": {
-        "p": { "query": { "StartsWith": "product:" } }
-      },
-      "fields": {
-        "name": {
-          "events": { "ItemAdded": { "from": "$.name" } },
-          "join": { "p": { "ProductUpdated": { "from": "$.name" } } }
-        }
-      }
+    "name": {
+      "events": { "CustomerRegistered": { "from": "$.name" } }
+    },
+    "responsible_name": {
+      "required": false,
+      "join": { "u": { "UserProfileUpdated": { "from": "$.full_name" } } }
     }
   }
 }
@@ -209,12 +207,8 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
   - `{ "increment_by": "$.path" }` — add the value at path to a numeric field
   - `{ "decrement_by": "$.path" }` — subtract the value at path from a numeric field
 - **D-26:** `required: true` → the Rust struct field is `T` (not `Option<T>`); deserialization fails if null. `required: false` (default) → `Option<T>`. `default` sets the initial state value before any events — a `required` field with a `default` starts populated.
-- **D-27: (TENTATIVE — depends on OQ-DSL-02, OQ-DSL-03)** List `key` declares how the engine identifies items for upsert. Keys are always extracted from event payload fields:
-  - JSON schema — single key: `"key": "$.item_id"`. Composite: `"key": ["$.order_id", "$.item_id"]`.
-  - DSL — single key: `items[item_id] { ... }`. Composite: `items[order_id, item_id] { ... }`. Key names in `[]` are bare payload field names (no `$.` prefix) — the brackets make the context unambiguous.
-  - **Rationale:** Tag-based keys (`$tags.item`) were removed because (a) the library does not enforce a `key:value` tag format convention, and (b) events carrying multiple tags with the same prefix (e.g., batch operations with `item:i1`, `item:i2`, `item:i3`) break the single-value-per-prefix assumption. Payload fields are explicit, unambiguous, and work for all event shapes.
-  - **Note:** Whether keys are the right mechanism at all is open — see OQ-DSL-02.
-- **D-28: (TENTATIVE — depends on OQ-DSL-02, OQ-DSL-03)** List upsert is implicit — any event appearing in any list item field's `events` triggers an upsert. **List item removal and the overall mutation model are open questions** — see OQ-DSL-01 and OQ-DSL-03 in the DSL section.
+- **D-27:** Nested objects use `"type": "object"` with a nested `"fields"` block. They are structural grouping — no key, no identity, no mutation complexity. Each nested field follows the same `events` → handler pattern as top-level scalar fields. In the DSL, nested objects use `field_name { ... }` block syntax without any key brackets.
+- **D-28:** ~~List keys and mutation~~ — **Deferred to Phase 4.1.** List fields (`"type": "list"`, keys, upsert, removal) are out of scope for Phase 4. Open questions OQ-DSL-01 (removed_by), OQ-DSL-02 (do keys need to exist), and OQ-DSL-03 (mutation model) must be resolved before list implementation.
 - **D-29:** JSON Path uses `$.` prefix for event payload references. Supports nested paths (`$.address.city`).
 
 ### ProjectionObserver (Phase 7 Design Note)
@@ -244,30 +238,23 @@ projection OrderView {
           |- o.ItemRemoved.price_cents
           |? 0
 
-    items[item_id] {
-        name:     o.ItemAdded.name
-        quantity: o.ItemAdded.quantity
-                |+ o.ItemUpdated.delta
-                |? 0
-        note?:    o.ItemNoteAdded.text
+    address {
+        city:        o.OrderPlaced.shipping_city
+                   | o.AddressChanged.city
+        postal_code: o.OrderPlaced.shipping_postal
+                   | o.AddressChanged.postal_code
     }
 }
 ```
 
 Phase 5 extension (design locked, not implemented in Phase 4):
 ```
-projection OrderView {
-    query tag.starts_with("order:") as o
-    join tag.starts_with("product:") as p for ItemAdded
+projection CustomerView {
+    query tag.starts_with("customer:") as c
+    join tag.starts_with("user:") as u for CustomerResponsibleAssigned
 
-    items[item_id] {
-        join tag.starts_with("product:") as p for ItemAdded
-
-        name:     o.ItemAdded.name | p.ProductUpdated.name
-        quantity: o.ItemAdded.quantity |+ o.ItemUpdated.delta |? 0
-    }
-
-    product_name?: p.ProductUpdated.name |? "unknown"
+    name:                c.CustomerRegistered.name
+    responsible_name?:   u.UserProfileUpdated.full_name |? "unassigned"
 }
 ```
 
@@ -277,18 +264,13 @@ projection OrderView {
 - `o.EventType.field` — event field reference via stream alias + event type + field name.
 - `o.EventType = "literal"` — literal value assignment from a specific event.
 - Required and default are independent: `|? value` sets initial state regardless of `?:` suffix.
-- `field_name[key_field]` or `field_name[key_a, key_b]` — list field declaration with key columns in square brackets. Key names are bare payload field names (no `$.` prefix). `{}` block follows with projected fields.
+- `field_name { ... }` — nested object block. Contains projected fields that follow the same `events` → handler rules as top-level scalars. No key, no identity — purely structural grouping.
 - `query tag.starts_with("X:") as alias` declares the primary stream. Alias used to reference events.
 - `join tag.starts_with("X:") as alias for EventType` — Phase 5. Join key resolved from the specified event type's tags. Explicit `on $.field` available as alternative resolution strategy.
 
 **Resolved items (previously open):**
-- Joins inside list fields: list-level `join` block (Phase 5). Design locked above.
 - `$tags` removed: Tag-based key resolution (`$tags.item`) dropped entirely. Tags are for consistency boundaries (`TagFilter`, `AppendCondition`); projections use payload field paths for all identity and data resolution. Rationale: (a) no enforced `key:value` tag format, (b) batch events with multiple same-prefix tags break the single-value assumption, (c) same-prefix multi-role events (e.g., two `user:` tags for accountant and responsible) are ambiguous.
-
-**Open questions:**
-- **OQ-DSL-01: `removed_by` semantics** — How does the engine identify which list item to remove when a removal event arrives? Previous design assumed tag-based key matching (dropped with `$tags`). Needs rethinking: does the removal event need to carry the same key fields? How do batch removals work? What if the removal event's field name differs from the key field name? Syntax and placement in the DSL are also open.
-- **OQ-DSL-02: Do list keys need to exist?** — What problem do list keys actually solve? Keys introduce upsert semantics (find-or-create by key, then update), but an append-only event log naturally produces ordered sequences. Are there simpler models? Do all lists need identity-based keying, or do some just need ordered append? If keys exist, are they always payload fields, or could there be keyless lists?
-- **OQ-DSL-03: List mutation model** — How should list items be mutated (upsert, update, removal)? The current design assumes key-based upsert, but this has unresolved complexity: batch events affecting multiple items, field name mismatches across event types contributing to the same list, partial updates vs full replacement. The mutation model, key mechanism, and removal semantics are tightly coupled — they should be designed together rather than in isolation.
+- Lists deferred to Phase 4.1: List fields (keys, mutation, removal) split out of Phase 4. Open questions OQ-DSL-01 (removed_by), OQ-DSL-02 (do keys need to exist), OQ-DSL-03 (mutation model) must be resolved during Phase 4.1 discussion.
 
 **Deferred to Phase 10:**
 - GROUP BY and window functions in the DSL (Phase 10 covers both the JSON schema extension and the query language surface).
