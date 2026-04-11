@@ -153,7 +153,6 @@ The authoritative schema. Phase 4 implements the `query` + `fields` subset. Phas
     "list_field": {
       "type": "list",
       "key": "$.item_id",
-      "remove_on": ["EventThatRemovesItem"],
       "fields": {
         "some_item_field": {
           "required": true,
@@ -210,11 +209,11 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
   - `{ "increment_by": "$.path" }` — add the value at path to a numeric field
   - `{ "decrement_by": "$.path" }` — subtract the value at path from a numeric field
 - **D-26:** `required: true` → the Rust struct field is `T` (not `Option<T>`); deserialization fails if null. `required: false` (default) → `Option<T>`. `default` sets the initial state value before any events — a `required` field with a `default` starts populated.
-- **D-27:** List `key` declares how the engine identifies items for upsert and removal. Keys are always extracted from event payload fields:
-  - Single key: `"key": "$.item_id"` — key extracted from event payload path.
-  - Composite key: `"key": ["$.order_id", "$.item_id"]` — multiple payload fields combined.
+- **D-27:** List `key` declares how the engine identifies items for upsert. Keys are always extracted from event payload fields:
+  - JSON schema — single key: `"key": "$.item_id"`. Composite: `"key": ["$.order_id", "$.item_id"]`.
+  - DSL — single key: `items[item_id] { ... }`. Composite: `items[order_id, item_id] { ... }`. Key names in `[]` are bare payload field names (no `$.` prefix) — the brackets make the context unambiguous.
   - **Rationale:** Tag-based keys (`$tags.item`) were removed because (a) the library does not enforce a `key:value` tag format convention, and (b) events carrying multiple tags with the same prefix (e.g., batch operations with `item:i1`, `item:i2`, `item:i3`) break the single-value-per-prefix assumption. Payload fields are explicit, unambiguous, and work for all event shapes.
-- **D-28:** List upsert is implicit — any event appearing in any list item field's `events` triggers an upsert. `remove_on` is an explicit array of event type names. The engine extracts the key from the removal event's payload using the same `key` field path declaration, then removes the matching list item.
+- **D-28:** List upsert is implicit — any event appearing in any list item field's `events` triggers an upsert. **List item removal (`removed_by` / `remove_on`) is an open question** — see OQ-DSL-01 in the DSL section. Previous design assumed tag-based key matching which was dropped with `$tags`.
 - **D-29:** JSON Path uses `$.` prefix for event payload references. Supports nested paths (`$.address.city`).
 
 ### ProjectionObserver (Phase 7 Design Note)
@@ -244,10 +243,7 @@ projection OrderView {
           |- o.ItemRemoved.price_cents
           |? 0
 
-    items {
-        key: $.item_id
-        removed_by: o.ItemRemoved | o.ItemArchived
-
+    items[item_id] {
         name:     o.ItemAdded.name
         quantity: o.ItemAdded.quantity
                 |+ o.ItemUpdated.delta
@@ -263,10 +259,8 @@ projection OrderView {
     query tag.starts_with("order:") as o
     join tag.starts_with("product:") as p for ItemAdded
 
-    items {
-        key: $.item_id
+    items[item_id] {
         join tag.starts_with("product:") as p for ItemAdded
-        removed_by: o.ItemRemoved | o.ItemArchived
 
         name:     o.ItemAdded.name | p.ProductUpdated.name
         quantity: o.ItemAdded.quantity |+ o.ItemUpdated.delta |? 0
@@ -282,17 +276,16 @@ projection OrderView {
 - `o.EventType.field` — event field reference via stream alias + event type + field name.
 - `o.EventType = "literal"` — literal value assignment from a specific event.
 - Required and default are independent: `|? value` sets initial state regardless of `?:` suffix.
-- `{}` appears only on list fields, not on scalar fields.
+- `field_name[key_field]` or `field_name[key_a, key_b]` — list field declaration with key columns in square brackets. Key names are bare payload field names (no `$.` prefix). `{}` block follows with projected fields.
 - `query tag.starts_with("X:") as alias` declares the primary stream. Alias used to reference events.
-- `key: $.field` — list item key from event payload field. `key: $.field_a, $.field_b` for composite keys.
-- `removed_by: EventType | OtherEvent` — event type names only; engine extracts the key from the removal event's payload using the list's `key` field path. Explicit field override: `removed_by: o.EventType on $.item_id`.
 - `join tag.starts_with("X:") as alias for EventType` — Phase 5. Join key resolved from the specified event type's tags. Explicit `on $.field` available as alternative resolution strategy.
 
 **Resolved items (previously open):**
-- `removed_by` syntax: event type names only. Placement inside list block is correct — it is a list-level control operation. Engine extracts key from removal event payload using the list's `key` path. Explicit field override available: `removed_by: o.EventType on $.item_id`.
-- Composite list keys: `key: $.order_id, $.item_id` — multiple payload field paths.
 - Joins inside list fields: list-level `join` block (Phase 5). Design locked above.
 - `$tags` removed: Tag-based key resolution (`$tags.item`) dropped entirely. Tags are for consistency boundaries (`TagFilter`, `AppendCondition`); projections use payload field paths for all identity and data resolution. Rationale: (a) no enforced `key:value` tag format, (b) batch events with multiple same-prefix tags break the single-value assumption, (c) same-prefix multi-role events (e.g., two `user:` tags for accountant and responsible) are ambiguous.
+
+**Open questions:**
+- **OQ-DSL-01: `removed_by` semantics** — How does the engine identify which list item to remove when a removal event arrives? Previous design assumed tag-based key matching (dropped with `$tags`). Needs rethinking: does the removal event need to carry the same key fields? How do batch removals work? What if the removal event's field name differs from the key field name? Syntax and placement in the DSL are also open.
 
 **Deferred to Phase 10:**
 - GROUP BY and window functions in the DSL (Phase 10 covers both the JSON schema extension and the query language surface).
