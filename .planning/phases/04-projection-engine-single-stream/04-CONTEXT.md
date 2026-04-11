@@ -132,37 +132,38 @@ The authoritative schema. Phase 4 implements `query` + scalar fields + nested ob
 **Phase 4 schema (implementable now):**
 ```json
 {
-  "name": "ProjectionName",
-  "query": { "StartsWith": "order:" },
+  "name": "CustomerView",
+  "query": { "StartsWith": "customer:" },
   "fields": {
-    "scalar_field": {
+    "name": {
       "required": true,
-      "default": "draft",
       "events": {
-        "EventType":  { "from": "$.json_path" },
-        "OtherEvent": { "value": "literal_string" }
+        "CustomerRegistered": { "from": "$.name" },
+        "CustomerRenamed":    { "from": "$.name" }
       }
     },
-    "counter_field": {
+    "accountant_name": {
       "events": {
-        "ItemAdded":   { "increment": 1 },
-        "ItemRemoved": { "decrement": 1 },
-        "ItemUpdated": { "increment_by": "$.delta" }
+        "AccountantAssigned": { "from": "$.name" },
+        "AccountantRemoved":  { "value": null }
       }
     },
     "address": {
       "type": "object",
+      "events": {
+        "AddressCleared": { "value": null }
+      },
       "fields": {
         "city": {
           "events": {
-            "OrderPlaced":      { "from": "$.shipping_city" },
-            "AddressChanged":   { "from": "$.city" }
+            "CustomerRegistered": { "from": "$.city" },
+            "AddressChanged":     { "from": "$.city" }
           }
         },
         "postal_code": {
           "events": {
-            "OrderPlaced":      { "from": "$.shipping_postal" },
-            "AddressChanged":   { "from": "$.postal_code" }
+            "CustomerRegistered": { "from": "$.postal_code" },
+            "AddressChanged":     { "from": "$.postal_code" }
           }
         }
       }
@@ -202,6 +203,7 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
 - **D-25:** Handler operation vocabulary (exhaustive for Phase 4):
   - `{ "from": "$.path" }` — copy field from event payload via JSON Path
   - `{ "value": "literal" }` — set to a static literal
+  - `{ "value": null }` — clear the field (set to null). Works on scalar fields and nested objects alike. In the DSL: `| c.EventType = null`. A `required: true` field cleared to null will cause deserialization to fail — callers must ensure required fields are repopulated or use `required: false` for clearable fields.
   - `{ "increment": N }` — add N to a numeric field
   - `{ "decrement": N }` — subtract N from a numeric field
   - `{ "increment_by": "$.path" }` — add the value at path to a numeric field
@@ -226,24 +228,21 @@ The `projection!` macro is a **query language**, not a Rust-mimicking DSL. It do
 
 Phase 4 (single-stream):
 ```
-projection OrderView {
-    query tag.starts_with("order:") as o
+projection CustomerView {
+    query tag.starts_with("customer:") as c
 
-    status:  o.OrderPlaced.status
-           | o.OrderCancelled = "cancelled"
-           |? "draft"
+    name:  c.CustomerRegistered.name
+         | c.CustomerRenamed.name
 
-    total:  o.OrderPlaced.total_cents
-          |+ o.ItemAdded.price_cents
-          |- o.ItemRemoved.price_cents
-          |? 0
+    accountant_name?:  c.AccountantAssigned.name
+                     | c.AccountantRemoved = null
 
-    address {
-        city:        o.OrderPlaced.shipping_city
-                   | o.AddressChanged.city
-        postal_code: o.OrderPlaced.shipping_postal
-                   | o.AddressChanged.postal_code
-    }
+    address? {
+        city:        c.CustomerRegistered.city
+                   | c.AddressChanged.city
+        postal_code: c.CustomerRegistered.postal_code
+                   | c.AddressChanged.postal_code
+    } | c.AddressCleared = null
 }
 ```
 
