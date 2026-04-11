@@ -18,7 +18,7 @@ projection ActivityFeed {
     query tag.starts_with("order:") as o
 
     events {
-        key: $tags.event_id
+        key: $.event_id
         type: $discriminator          // drives which variant is selected
 
         OrderPlaced {
