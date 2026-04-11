@@ -209,11 +209,12 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
   - `{ "increment_by": "$.path" }` — add the value at path to a numeric field
   - `{ "decrement_by": "$.path" }` — subtract the value at path from a numeric field
 - **D-26:** `required: true` → the Rust struct field is `T` (not `Option<T>`); deserialization fails if null. `required: false` (default) → `Option<T>`. `default` sets the initial state value before any events — a `required` field with a `default` starts populated.
-- **D-27:** List `key` declares how the engine identifies items for upsert. Keys are always extracted from event payload fields:
+- **D-27: (TENTATIVE — depends on OQ-DSL-02, OQ-DSL-03)** List `key` declares how the engine identifies items for upsert. Keys are always extracted from event payload fields:
   - JSON schema — single key: `"key": "$.item_id"`. Composite: `"key": ["$.order_id", "$.item_id"]`.
   - DSL — single key: `items[item_id] { ... }`. Composite: `items[order_id, item_id] { ... }`. Key names in `[]` are bare payload field names (no `$.` prefix) — the brackets make the context unambiguous.
   - **Rationale:** Tag-based keys (`$tags.item`) were removed because (a) the library does not enforce a `key:value` tag format convention, and (b) events carrying multiple tags with the same prefix (e.g., batch operations with `item:i1`, `item:i2`, `item:i3`) break the single-value-per-prefix assumption. Payload fields are explicit, unambiguous, and work for all event shapes.
-- **D-28:** List upsert is implicit — any event appearing in any list item field's `events` triggers an upsert. **List item removal (`removed_by` / `remove_on`) is an open question** — see OQ-DSL-01 in the DSL section. Previous design assumed tag-based key matching which was dropped with `$tags`.
+  - **Note:** Whether keys are the right mechanism at all is open — see OQ-DSL-02.
+- **D-28: (TENTATIVE — depends on OQ-DSL-02, OQ-DSL-03)** List upsert is implicit — any event appearing in any list item field's `events` triggers an upsert. **List item removal and the overall mutation model are open questions** — see OQ-DSL-01 and OQ-DSL-03 in the DSL section.
 - **D-29:** JSON Path uses `$.` prefix for event payload references. Supports nested paths (`$.address.city`).
 
 ### ProjectionObserver (Phase 7 Design Note)
@@ -286,6 +287,8 @@ projection OrderView {
 
 **Open questions:**
 - **OQ-DSL-01: `removed_by` semantics** — How does the engine identify which list item to remove when a removal event arrives? Previous design assumed tag-based key matching (dropped with `$tags`). Needs rethinking: does the removal event need to carry the same key fields? How do batch removals work? What if the removal event's field name differs from the key field name? Syntax and placement in the DSL are also open.
+- **OQ-DSL-02: Do list keys need to exist?** — What problem do list keys actually solve? Keys introduce upsert semantics (find-or-create by key, then update), but an append-only event log naturally produces ordered sequences. Are there simpler models? Do all lists need identity-based keying, or do some just need ordered append? If keys exist, are they always payload fields, or could there be keyless lists?
+- **OQ-DSL-03: List mutation model** — How should list items be mutated (upsert, update, removal)? The current design assumes key-based upsert, but this has unresolved complexity: batch events affecting multiple items, field name mismatches across event types contributing to the same list, partial updates vs full replacement. The mutation model, key mechanism, and removal semantics are tightly coupled — they should be designed together rather than in isolation.
 
 **Deferred to Phase 10:**
 - GROUP BY and window functions in the DSL (Phase 10 covers both the JSON schema extension and the query language surface).
