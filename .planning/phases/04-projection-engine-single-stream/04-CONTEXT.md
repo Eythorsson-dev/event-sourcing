@@ -150,9 +150,7 @@ The authoritative schema. Phase 4 implements `query` + scalar fields + nested ob
     },
     "address": {
       "type": "object",
-      "events": {
-        "AddressCleared": { "value": null }
-      },
+      "cleared_by": ["AddressCleared"],
       "fields": {
         "city": {
           "events": {
@@ -174,27 +172,34 @@ The authoritative schema. Phase 4 implements `query` + scalar fields + nested ob
 
 Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` — the validator resolves it from the referenced `EventSchemaDef` (D-16).
 
-**Phase 5 extension (design locked, not implemented in Phase 4):**
+**Phase 5 extension (design direction, not implemented in Phase 4):**
 ```json
 {
   "query": { "StartsWith": "customer:" },
-  "joins": {
-    "u": {
-      "query": { "StartsWith": "user:" },
-      "for": ["CustomerResponsibleAssigned"]
-    }
-  },
   "fields": {
     "name": {
       "events": { "CustomerRegistered": { "from": "$.name" } }
     },
-    "responsible_name": {
-      "required": false,
-      "join": { "u": { "UserProfileUpdated": { "from": "$.full_name" } } }
+    "accountant": {
+      "type": "object",
+      "cleared_by": ["AccountantRemoved"],
+      "join": {
+        "alias": "u",
+        "query": { "StartsWith": "user:" }
+      },
+      "fields": {
+        "full_name": {
+          "events": { "UserProfileUpdated": { "from": "$.full_name" } }
+        },
+        "email": {
+          "events": { "UserProfileUpdated": { "from": "$.email" } }
+        }
+      }
     }
   }
 }
 ```
+Note: Join resolution mechanism (how the engine determines which `user:X` stream to join) is a Phase 5 open question. The `for` keyword from earlier design is under review.
 
 ### Schema Design Rules
 
@@ -203,13 +208,17 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
 - **D-25:** Handler operation vocabulary (exhaustive for Phase 4):
   - `{ "from": "$.path" }` — copy field from event payload via JSON Path
   - `{ "value": "literal" }` — set to a static literal
-  - `{ "value": null }` — clear the field (set to null). Works on scalar fields and nested objects alike. In the DSL: `| c.EventType = null`. A `required: true` field cleared to null will cause deserialization to fail — callers must ensure required fields are repopulated or use `required: false` for clearable fields.
+  - `{ "value": null }` — clear a scalar field to null. In the DSL: `| alias.EventType = null`. A `required: true` field cleared to null will cause deserialization to fail — callers must ensure required fields are repopulated or use `required: false` for clearable fields.
   - `{ "increment": N }` — add N to a numeric field
   - `{ "decrement": N }` — subtract N from a numeric field
   - `{ "increment_by": "$.path" }` — add the value at path to a numeric field
   - `{ "decrement_by": "$.path" }` — subtract the value at path from a numeric field
 - **D-26:** `required: true` → the Rust struct field is `T` (not `Option<T>`); deserialization fails if null. `required: false` (default) → `Option<T>`. `default` sets the initial state value before any events — a `required` field with a `default` starts populated.
-- **D-27:** Nested objects use `"type": "object"` with a nested `"fields"` block. They are structural grouping — no key, no identity, no mutation complexity. Each nested field follows the same `events` → handler pattern as top-level scalar fields. In the DSL, nested objects use `field_name { ... }` block syntax without any key brackets.
+- **D-27:** Nested objects:
+  - Use `"type": "object"` with a nested `"fields"` block in JSON. In the DSL: `field_name { ... }` block syntax.
+  - Each nested field follows the same `events` → handler pattern as top-level scalar fields.
+  - `"cleared_by": ["EventType"]` — optional. When any listed event fires, the entire object is set to null. In the DSL: `} cleared_by alias.EventType`. Only valid on optional objects (`field?`).
+  - Object-scoped joins (Phase 5): a `join` can be declared inside an object block, scoping the joined alias to that object. This is the natural way to express "this sub-object's data comes from a different stream." Join resolution details are Phase 5.
 - **D-28:** ~~List keys and mutation~~ — **Deferred to Phase 4.1.** List fields (`"type": "list"`, keys, upsert, removal) are out of scope for Phase 4. Open questions OQ-DSL-01 (removed_by), OQ-DSL-02 (do keys need to exist), and OQ-DSL-03 (mutation model) must be resolved before list implementation.
 - **D-29:** JSON Path uses `$.` prefix for event payload references. Supports nested paths (`$.address.city`).
 
@@ -242,7 +251,7 @@ projection CustomerView {
                    | c.AddressChanged.city
         postal_code: c.CustomerRegistered.postal_code
                    | c.AddressChanged.postal_code
-    } | c.AddressCleared = null
+    } cleared_by c.AddressCleared
 }
 ```
 
@@ -250,26 +259,33 @@ Phase 5 extension (design locked, not implemented in Phase 4):
 ```
 projection CustomerView {
     query tag.starts_with("customer:") as c
-    join tag.starts_with("user:") as u for CustomerResponsibleAssigned
 
-    name:                c.CustomerRegistered.name
-    responsible_name?:   u.UserProfileUpdated.full_name |? "unassigned"
+    name: c.CustomerRegistered.name
+
+    accountant? {
+        join tag.starts_with("user:") as u
+        full_name: u.UserProfileUpdated.full_name
+        email:     u.UserProfileUpdated.email
+    } cleared_by c.AccountantRemoved
 }
 ```
 
 **Settled rules:**
 - `field:` — required (`T`). `field?:` — optional (`Option<T>`). Required by default.
 - `|` — pipe: on this event, assign. `|+` increment. `|-` decrement. `|?` default (always last).
-- `o.EventType.field` — event field reference via stream alias + event type + field name.
-- `o.EventType = "literal"` — literal value assignment from a specific event.
+- `alias.EventType.field` — event field reference via stream alias + event type + field name.
+- `alias.EventType = "literal"` — literal value assignment from a specific event.
+- `alias.EventType = null` — clear a scalar field to null on a specific event.
 - Required and default are independent: `|? value` sets initial state regardless of `?:` suffix.
-- `field_name { ... }` — nested object block. Contains projected fields that follow the same `events` → handler rules as top-level scalars. No key, no identity — purely structural grouping.
+- `field_name { ... }` — nested object block. Contains projected fields that follow the same `events` → handler rules as top-level scalars.
+- `field_name? { ... } cleared_by alias.EventType` — optional nested object with a clear trigger. When the specified event fires, the entire object becomes null.
 - `query tag.starts_with("X:") as alias` declares the primary stream. Alias used to reference events.
-- `join tag.starts_with("X:") as alias for EventType` — Phase 5. Join key resolved from the specified event type's tags. Explicit `on $.field` available as alternative resolution strategy.
+- `join tag.starts_with("X:") as alias` — Phase 5. Can be declared at root or inside a nested object block (object-scoped join). Join key resolution mechanism is a Phase 5 open question — `for EventType` syntax from earlier design is under review.
 
 **Resolved items (previously open):**
 - `$tags` removed: Tag-based key resolution (`$tags.item`) dropped entirely. Tags are for consistency boundaries (`TagFilter`, `AppendCondition`); projections use payload field paths for all identity and data resolution. Rationale: (a) no enforced `key:value` tag format, (b) batch events with multiple same-prefix tags break the single-value assumption, (c) same-prefix multi-role events (e.g., two `user:` tags for accountant and responsible) are ambiguous.
 - Lists deferred to Phase 4.1: List fields (keys, mutation, removal) split out of Phase 4. Open questions OQ-DSL-01 (removed_by), OQ-DSL-02 (do keys need to exist), OQ-DSL-03 (mutation model) must be resolved during Phase 4.1 discussion.
+- Object-level events replaced by `cleared_by`: Instead of an `events` block on the object itself, objects use a declarative `cleared_by` property. Scalar fields use `{ "value": null }` in their event handlers. No new handler pattern needed.
 
 **Deferred to Phase 10:**
 - GROUP BY and window functions in the DSL (Phase 10 covers both the JSON schema extension and the query language surface).

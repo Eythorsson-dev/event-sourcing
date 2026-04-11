@@ -38,8 +38,9 @@ The `$tags` design question (OQ-01) has been resolved — `$tags` is dropped ent
 
 ### Join Declaration
 
-- **D-01:** Joins are declared at two levels:
+- **D-01:** Joins are declared at three levels:
   - **Root-level** — one joined stream instance for the whole projection
+  - **Object-level** — one joined stream instance scoped to a nested object (settled in Phase 4 discussion). Natural for expressing "this sub-object's data comes from a different stream."
   - **List-level** — one joined stream instance per list item (declared inside the list block)
 - **D-02:** Join syntax in DSL:
   ```
@@ -83,7 +84,9 @@ The `$tags` design question (OQ-01) has been resolved — `$tags` is dropped ent
   }
   ```
 
-### Join Resolution Strategies (replaces D-04–D-08 implicit `$tags` design)
+### Join Resolution Strategies (UNDER REVIEW)
+
+**Note:** The `for EventType` syntax and the three-strategy model below were designed alongside the `$tags` accumulation model. With `$tags` dropped and payload field paths now primary, join resolution needs rethinking during Phase 5 discussion. The strategies below are preserved as a starting point but are **not settled**.
 
 - **D-04:** Three explicit join resolution strategies — every join must use one:
 
