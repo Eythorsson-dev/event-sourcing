@@ -152,7 +152,7 @@ The authoritative schema. Phase 4 implements the `query` + `fields` subset. Phas
     },
     "list_field": {
       "type": "list",
-      "key": "$tags.item",
+      "key": "$.item_id",
       "remove_on": ["EventThatRemovesItem"],
       "fields": {
         "some_item_field": {
@@ -173,8 +173,6 @@ The authoritative schema. Phase 4 implements the `query` + `fields` subset. Phas
 
 Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` — the validator resolves it from the referenced `EventSchemaDef` (D-16).
 
-List `key` can also use a payload field path as a fallback for non-DCB events: `"key": { "field": "$.item_id" }`.
-
 **Phase 5 extension (design locked, not implemented in Phase 4):**
 ```json
 {
@@ -185,7 +183,7 @@ List `key` can also use a payload field path as a fallback for non-DCB events: `
   "fields": {
     "list_field": {
       "type": "list",
-      "key": "$tags.item",
+      "key": "$.item_id",
       "joins": {
         "p": { "query": { "StartsWith": "product:" } }
       },
@@ -212,17 +210,12 @@ List `key` can also use a payload field path as a fallback for non-DCB events: `
   - `{ "increment_by": "$.path" }` — add the value at path to a numeric field
   - `{ "decrement_by": "$.path" }` — subtract the value at path from a numeric field
 - **D-26:** `required: true` → the Rust struct field is `T` (not `Option<T>`); deserialization fails if null. `required: false` (default) → `Option<T>`. `default` sets the initial state value before any events — a `required` field with a `default` starts populated.
-- **D-27:** List `key` declares how the engine identifies items for upsert and removal. Two forms:
-  - Tag-based (preferred in DCB model): `"key": "$tags.item"` — key is the value of the `item:` prefix in the event's tags. Composite: `"key": ["$tags.order", "$tags.item"]`.
-  - Field-based (fallback for non-DCB events): `"key": { "field": "$.item_id" }` — key extracted from event payload path. Composite: `"key": { "fields": ["$.order_id", "$.item_id"] }`.
-- **D-28:** List upsert is implicit — any event appearing in any list item field's `events` triggers an upsert. `remove_on` is an explicit array of event type names. The engine uses the `key` declaration for both upsert identity and removal matching.
+- **D-27:** List `key` declares how the engine identifies items for upsert and removal. Keys are always extracted from event payload fields:
+  - Single key: `"key": "$.item_id"` — key extracted from event payload path.
+  - Composite key: `"key": ["$.order_id", "$.item_id"]` — multiple payload fields combined.
+  - **Rationale:** Tag-based keys (`$tags.item`) were removed because (a) the library does not enforce a `key:value` tag format convention, and (b) events carrying multiple tags with the same prefix (e.g., batch operations with `item:i1`, `item:i2`, `item:i3`) break the single-value-per-prefix assumption. Payload fields are explicit, unambiguous, and work for all event shapes.
+- **D-28:** List upsert is implicit — any event appearing in any list item field's `events` triggers an upsert. `remove_on` is an explicit array of event type names. The engine extracts the key from the removal event's payload using the same `key` field path declaration, then removes the matching list item.
 - **D-29:** JSON Path uses `$.` prefix for event payload references. Supports nested paths (`$.address.city`).
-
-### $tags on Read Model Objects
-
-- **D-34:** Every projection root object and every list item automatically gets a `$tags` map populated from the tags of events that affected it. This is implicit — the user does not need to declare a `$tags` field.
-- **D-35:** `$tags` stores the **current** value per tag prefix group, not a historical union. When a new event arrives carrying tag `product:p2` for an item that previously had `product:p1`, the `$tags.product` entry is updated to `"p2"`. The `$tags` map always reflects the latest identity of the object.
-- **D-36:** `$tags` is available to the projection engine for key resolution and join resolution (Phase 5). It is also available in the serialized `serde_json::Value` state for inspection. The field name `$tags` is reserved and cannot be used as a user-declared field name.
 
 ### ProjectionObserver (Phase 7 Design Note)
 
@@ -252,7 +245,7 @@ projection OrderView {
           |? 0
 
     items {
-        key: $tags.item
+        key: $.item_id
         removed_by: o.ItemRemoved | o.ItemArchived
 
         name:     o.ItemAdded.name
@@ -268,11 +261,11 @@ Phase 5 extension (design locked, not implemented in Phase 4):
 ```
 projection OrderView {
     query tag.starts_with("order:") as o
-    join tag.starts_with("product:") as p    // on implicit: $tags.product
+    join tag.starts_with("product:") as p for ItemAdded
 
     items {
-        key: $tags.item
-        join tag.starts_with("product:") as p  // list-level join; on implicit: $tags.product
+        key: $.item_id
+        join tag.starts_with("product:") as p for ItemAdded
         removed_by: o.ItemRemoved | o.ItemArchived
 
         name:     o.ItemAdded.name | p.ProductUpdated.name
@@ -291,15 +284,15 @@ projection OrderView {
 - Required and default are independent: `|? value` sets initial state regardless of `?:` suffix.
 - `{}` appears only on list fields, not on scalar fields.
 - `query tag.starts_with("X:") as alias` declares the primary stream. Alias used to reference events.
-- `key: $tags.X` — list item key from tag prefix. `key: $tags.X, $tags.Y` for composite keys.
-- `key: $.field` — list item key from event payload field (fallback for non-DCB events).
-- `removed_by: EventType | OtherEvent` — event type names only; engine matches via item's `$tags` key. Fallback with explicit field: `removed_by: o.EventType on $.item_id`.
-- `join tag.starts_with("X:") as alias` — Phase 5. `on` implicit from prefix via `$tags`. Explicit `on $.field` available for non-DCB events.
+- `key: $.field` — list item key from event payload field. `key: $.field_a, $.field_b` for composite keys.
+- `removed_by: EventType | OtherEvent` — event type names only; engine extracts the key from the removal event's payload using the list's `key` field path. Explicit field override: `removed_by: o.EventType on $.item_id`.
+- `join tag.starts_with("X:") as alias for EventType` — Phase 5. Join key resolved from the specified event type's tags. Explicit `on $.field` available as alternative resolution strategy.
 
 **Resolved items (previously open):**
-- `removed_by` syntax: event type names only (tag-based key). Placement inside list block is correct — it is a list-level control operation. Field-path syntax available as fallback.
-- Composite list keys: `key: $tags.order, $tags.item` (tag-based) or `key: { fields: ["$.order_id", "$.item_id"] }` (field-based).
+- `removed_by` syntax: event type names only. Placement inside list block is correct — it is a list-level control operation. Engine extracts key from removal event payload using the list's `key` path. Explicit field override available: `removed_by: o.EventType on $.item_id`.
+- Composite list keys: `key: $.order_id, $.item_id` — multiple payload field paths.
 - Joins inside list fields: list-level `join` block (Phase 5). Design locked above.
+- `$tags` removed: Tag-based key resolution (`$tags.item`) dropped entirely. Tags are for consistency boundaries (`TagFilter`, `AppendCondition`); projections use payload field paths for all identity and data resolution. Rationale: (a) no enforced `key:value` tag format, (b) batch events with multiple same-prefix tags break the single-value assumption, (c) same-prefix multi-role events (e.g., two `user:` tags for accountant and responsible) are ambiguous.
 
 **Deferred to Phase 10:**
 - GROUP BY and window functions in the DSL (Phase 10 covers both the JSON schema extension and the query language surface).

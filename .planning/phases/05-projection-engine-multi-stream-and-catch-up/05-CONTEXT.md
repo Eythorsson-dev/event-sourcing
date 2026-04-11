@@ -6,37 +6,19 @@
 <open_questions>
 ## Open Questions
 
-### OQ-01: `$tags` vs `tag_starting_with()` for implicit join resolution and list keys
+### ~~OQ-01: `$tags` vs `tag_starting_with()` for implicit join resolution and list keys~~ — RESOLVED
 
-Two approaches are on the table. The choice affects ergonomics, read model state shape, and how the multi-role same-prefix edge case is handled.
+**Decision: Drop `$tags` entirely (beyond Option B).**
 
-**Option A — Keep `$tags` (implicit accumulation)**
-- The engine accumulates tag values into a `$tags` map as events are processed: `item:i1` → `$tags["item"] = "i1"`.
-- List keys: `key: $tags.item` — reads from accumulated state.
-- Join resolution: implicit — engine reads `$tags["product"]` to resolve the `p` join alias. No declaration needed beyond the join itself.
-- `$tags` is user-visible in the read model JSON as a reserved key (or kept internal-only).
-- Ergonomic for the common case. Problem only when two join aliases share the same `StartsWith` prefix and need different stream instances — then `for EventType` is needed as an explicit override.
+`$tags` as a concept is removed from the projection engine. The reasons go beyond the original framing:
+1. **No enforced tag format** — the library does not require `key:value` tag structure, so any feature that parses tag prefixes is built on an unenforced convention.
+2. **Batch events break the scalar assumption** — an event tagged `["item:i1", "item:i2", "item:i3"]` cannot be represented by a single `$tags.item` value. This is not an edge case; batch operations are common in event sourcing.
+3. **Multi-role same-prefix ambiguity** — a projection referencing two `user:` tags in different roles (accountant vs. responsible) cannot be distinguished by prefix alone.
 
-**Option B — Drop `$tags`, use `tag_starting_with()` (per-event extraction)**
-- No accumulated state. Tag values extracted from the current event at processing time.
-- List keys: `key: { tag_starting_with: "item:" }` — extracts suffix `"i1"` from `"item:i1"` on the arriving event.
-- Join resolution: requires explicit `for EventType` or `on $.field` on every join — no implicit resolution.
-- Read model state is clean — only explicitly projected fields, no reserved keys.
-- More verbose. `for EventType` must be declared for every join.
-
-**Option C — `$tags` internal only, `tag_starting_with()` for field access**
-- Engine tracks tag values internally per prefix (same as Option A) for implicit join resolution.
-- `$tags` is NOT exposed in the read model JSON — no reserved key visible to the developer.
-- List keys and projected fields use `tag_starting_with()` / `tag_ending_with()` to extract tag values explicitly when needed.
-- `for EventType` available as an override for the same-prefix multi-alias edge case.
-- Ergonomic default (like A) with clean state (like B). The scalar assumption exists internally.
-
-**Key facts established:**
-- `$tags` scalar assumption (latest wins per prefix) only breaks when two join aliases share the same `StartsWith` prefix and each needs a different stream instance. For all other cases, latest-wins is correct behaviour (it handles key changes via replay).
-- `for EventType` solves the same-prefix multi-alias case cleanly regardless of which option is chosen for the default.
-- The practical difference between Option A and B is mostly where the scalar value lives: accumulated engine state vs. extracted per-event. Both produce the same result in the common case.
-
-**Decision needed before planning Phase 5.**
+**What replaced it:**
+- **List keys:** Always payload field paths — `key: $.item_id` (DSL) / `"key": "$.item_id"` (JSON). See Phase 4 D-27.
+- **Join resolution:** Explicit `for EventType` (engine extracts join key from specified event's tags) or `on $.field` (reads from projected state). See D-04–D-08 below.
+- **Tag extraction expressions:** `tag_starting_with()` / `tag_ending_with()` remain available as per-event extraction utilities (D-09–D-13 below) for cases where tag values need to be projected as fields — but they are not used for list keys or implicit join resolution.
 
 </open_questions>
 
@@ -45,7 +27,7 @@ Two approaches are on the table. The choice affects ergonomics, read model state
 
 Extend the projection engine with multi-stream joins, list-level joins, and inline catch-up reads. The single-stream engine from Phase 4 is the foundation — this phase adds the `joins` block at root and list levels, and implements the runtime mechanics of join resolution, replay, and cycle detection.
 
-The `$tags` / `tag_starting_with()` design choice (OQ-01) affects the list key syntax, join resolution mechanics, and whether the read model state carries a reserved `$tags` key. That question must be resolved before planning.
+The `$tags` design question (OQ-01) has been resolved — `$tags` is dropped entirely. List keys use payload field paths, join resolution uses explicit `for EventType` or `on $.field`.
 
 **Depends on:** Phase 4 (single-stream engine, `TagFilter`, `ProjectionDefinition.query`)
 
@@ -201,7 +183,7 @@ The `$tags` / `tag_starting_with()` design choice (OQ-01) affects the list key s
 ### Prior Phase Contracts
 - `.planning/phases/03.2-keyed-tag-and-tag-filter/03.2-CONTEXT.md` — `TagFilter` type used in join `query` declarations
 - `.planning/phases/04-projection-engine-single-stream/04-CONTEXT.md` — Single-stream engine, `ProjectionDefinition` schema, `ProjectionCheckpoint` (D-20), `ReadModel` trait, `ProjectionEngine` API
-  - **Note:** D-34–D-36 in Phase 4 context (`$tags` decisions) are superseded by D-04–D-13 in this document
+  - **Note:** D-34–D-36 (`$tags`) were removed from Phase 4 context. `$tags` is dropped entirely — see OQ-01 resolution above and Phase 4 D-27 revision.
 
 ### Requirements
 - `.planning/REQUIREMENTS.md` — PROJ-02 (multi-stream joins), PROJ-05 (same engine for read models and constraints), LOG-08 (inline catch-up)
