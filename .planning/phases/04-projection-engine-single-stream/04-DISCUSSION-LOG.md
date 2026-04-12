@@ -170,3 +170,16 @@ Settled: `keys` is an object where field names map to their JSON Path. Supports 
 
 - `from_array` / events with array payloads — v2 or future phase
 - `inventory` crate for compile-time ReadModel registration — Phase 7 implementation detail
+
+---
+
+## Schema Conflict Definition — Revisited 2026-04-12
+
+| Option | Description | Selected |
+|--------|-------------|----------|
+| Permissive (original D-07) | Adding fields OK; only remove/retype = conflict | |
+| Strict equality | Any diff (including additions) = conflict; evolution is an explicit future feature | ✓ |
+
+**User's choice:** Keep v1 simple — no schema drift allowed, not even additive. Non-breaking evolution and schema migration deferred to a dedicated todo (`non-breaking-schema-evolution.md`).
+**Rationale:** Strict equality is unambiguous and forces deliberate schema changes rather than accidental drift. Evolution semantics (aliases, additive fields, versioned migrations) deserve their own design pass, not a v1 compromise.
+**Impact:** D-07 rewritten. New todo created. D-08 (DB+code union) unchanged — still needed for bootstrap and deleted-type survival.
