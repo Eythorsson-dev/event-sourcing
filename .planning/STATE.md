@@ -82,6 +82,7 @@ Plan: Not started
 ### Active Todos
 
 - [ ] Plan Phase 1
+- [ ] Create JS wrapper — export core module as WebAssembly library (`2026-04-12-create-js-wrapper-export-core-module-as-webassembly-library.md`)
 
 ### Roadmap Evolution
 
