@@ -50,7 +50,11 @@ impl GlobalSequenceId {
     }
 
     pub fn next(self) -> Self {
-        Self(self.0 + 1)
+        Self(
+            self.0
+                .checked_add(1)
+                .expect("GlobalSequenceId overflow: u64::MAX exceeded"),
+        )
     }
 }
 
