@@ -74,7 +74,7 @@ All other libraries (serde 1.0.220, serde_json 1.0.149, thiserror 2.0) already i
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **`HandlerSpec::Value { value: null }` vs absent key in serde:** `{ "value": null }` should deserialize as `Value::Null`. Confirm by test — the enum variant approach handles this correctly.
 2. **`NoOpEventSchemaStore` home:** Recommend defining it in the core crate behind `#[cfg(test)]` for unit tests; `InMemoryEventSchemaStore` lives in `event-sourcing-logstore-inmemory`.
