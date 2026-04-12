@@ -32,7 +32,10 @@ impl fmt::Display for Tag {
 }
 
 /// Global sequence ID across all streams. Monotonically increasing. Starts at 1, ZERO = no events.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+)]
+#[serde(transparent)]
 pub struct GlobalSequenceId(u64);
 
 impl GlobalSequenceId {
@@ -121,5 +124,14 @@ mod tests {
         };
         assert_eq!(event.event_type, "OrderPlaced");
         assert_eq!(event.tags.len(), 1);
+    }
+
+    #[test]
+    fn global_sequence_id_serde_roundtrip() {
+        let original = GlobalSequenceId::new(42);
+        let json = serde_json::to_string(&original).unwrap();
+        assert_eq!(json, "42");
+        let decoded: GlobalSequenceId = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, original);
     }
 }

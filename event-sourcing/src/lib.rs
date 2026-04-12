@@ -14,7 +14,7 @@ pub mod types;
 pub use error::{AppendCondition, AppendError, StoreError};
 pub use event::StoredEvent;
 pub use event_log::{EventLog, EventLogError, EventStreamExt, StreamError};
-pub use query::{Criterion, Query};
+pub use query::{Criterion, Query, TagFilter};
 pub use store::LogStore;
 pub use types::{GlobalSequenceId, InvalidTag, NewEvent, Tag};
 
