@@ -612,4 +612,166 @@ mod tests {
         let events: Vec<_> = stream.collect::<Vec<_>>().await;
         assert_eq!(events.len(), 0);
     }
+
+    #[tokio::test]
+    async fn inmemory_evaluates_tag_filter_variants() {
+        use event_sourcing::{Criterion, TagFilter};
+
+        let store = InMemoryLogStore::new();
+
+        for e in [
+            test_event("E1", &["order:o1"]),
+            test_event("E1", &["order:o2"]),
+            test_event("E1", &["premium"]),
+            test_event("E1", &["shipping:ship1"]),
+        ] {
+            store.append(vec![e], None).await.unwrap();
+        }
+
+        // StartsWith("order:") → 2 events
+        let q = Query {
+            criteria: vec![Criterion {
+                event_types: HashSet::new(),
+                tag_filter: Some(TagFilter::StartsWith("order:".into())),
+            }],
+        };
+        let events: Vec<_> = store
+            .query(q, GlobalSequenceId::ZERO)
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
+        assert_eq!(events.len(), 2, "StartsWith(order:) should match 2 events");
+
+        // EndsWith(":o1") → 1 event
+        let q = Query {
+            criteria: vec![Criterion {
+                event_types: HashSet::new(),
+                tag_filter: Some(TagFilter::EndsWith(":o1".into())),
+            }],
+        };
+        let events: Vec<_> = store
+            .query(q, GlobalSequenceId::ZERO)
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
+        assert_eq!(events.len(), 1, "EndsWith(:o1) should match 1 event");
+
+        // Or(Equals("premium"), StartsWith("shipping:")) → 2 events
+        let q = Query {
+            criteria: vec![Criterion {
+                event_types: HashSet::new(),
+                tag_filter: Some(TagFilter::Or(vec![
+                    TagFilter::Equals(tag("premium")),
+                    TagFilter::StartsWith("shipping:".into()),
+                ])),
+            }],
+        };
+        let events: Vec<_> = store
+            .query(q, GlobalSequenceId::ZERO)
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
+        assert_eq!(
+            events.len(),
+            2,
+            "Or(premium, shipping:*) should match 2 events"
+        );
+
+        // And(StartsWith("order:"), Equals("order:o1")) → 1 event
+        let q = Query {
+            criteria: vec![Criterion {
+                event_types: HashSet::new(),
+                tag_filter: Some(TagFilter::And(vec![
+                    TagFilter::StartsWith("order:".into()),
+                    TagFilter::Equals(tag("order:o1")),
+                ])),
+            }],
+        };
+        let events: Vec<_> = store
+            .query(q, GlobalSequenceId::ZERO)
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
+        assert_eq!(
+            events.len(),
+            1,
+            "And(order:*, order:o1) should match 1 event"
+        );
+
+        // tag_filter: None + empty event_types → match all 4
+        let q = Query {
+            criteria: vec![Criterion {
+                event_types: HashSet::new(),
+                tag_filter: None,
+            }],
+        };
+        let events: Vec<_> = store
+            .query(q, GlobalSequenceId::ZERO)
+            .await
+            .unwrap()
+            .collect::<Vec<_>>()
+            .await;
+        assert_eq!(events.len(), 4, "tag_filter=None should match all events");
+    }
+
+    #[tokio::test]
+    async fn append_condition_with_starts_with_filter_detects_cross_instance_conflict() {
+        use event_sourcing::{AppendError, Criterion, TagFilter};
+
+        let store = InMemoryLogStore::new();
+
+        store
+            .append(vec![test_event("E", &["order:o1"])], None)
+            .await
+            .unwrap();
+
+        let condition = AppendCondition {
+            query: Query {
+                criteria: vec![Criterion {
+                    event_types: HashSet::new(),
+                    tag_filter: Some(TagFilter::StartsWith("order:".into())),
+                }],
+            },
+            after: GlobalSequenceId::ZERO,
+        };
+        let result = store
+            .append(vec![test_event("E", &["order:o2"])], Some(condition))
+            .await;
+
+        match result {
+            Err(AppendError::ConcurrencyConflict { .. }) => {}
+            other => panic!("expected ConcurrencyConflict, got {:?}", other),
+        }
+    }
+
+    #[tokio::test]
+    async fn append_condition_with_starts_with_filter_allows_when_no_match() {
+        use event_sourcing::{Criterion, TagFilter};
+
+        let store = InMemoryLogStore::new();
+
+        store
+            .append(vec![test_event("E", &["premium"])], None)
+            .await
+            .unwrap();
+
+        let condition = AppendCondition {
+            query: Query {
+                criteria: vec![Criterion {
+                    event_types: HashSet::new(),
+                    tag_filter: Some(TagFilter::StartsWith("order:".into())),
+                }],
+            },
+            after: GlobalSequenceId::ZERO,
+        };
+        let result = store
+            .append(vec![test_event("E", &["order:o1"])], Some(condition))
+            .await;
+
+        assert!(result.is_ok(), "expected Ok, got {:?}", result);
+    }
 }
