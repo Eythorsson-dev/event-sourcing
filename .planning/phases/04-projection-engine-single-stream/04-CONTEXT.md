@@ -51,7 +51,7 @@ Phase 4 scope: **single-stream projections with scalar fields and nested objects
   1. **Startup (explicit):** `event_log.validate_schemas().await -> Result<(), SchemaConflictError>` — compares all `#[derive(Event)]` schemas in compiled code against every persisted `EventSchemaDef`. Returns a typed error; the application decides whether to panic or refuse to start.
   2. **Append (implicit safety net):** If a schema for the event type already exists in the store and it differs from `event.schema()`, `EventLog::append` returns `Err(AppendError::SchemaConflict { event_type, expected, actual })`.
 
-- **D-07:** **Conflict definition (simple semantic):** A conflict is triggered when a field is removed or its `FieldType` changes. Adding new fields is allowed — old events simply won't have those fields in their JSON payload (they produce `null` for projection paths that reference them). Renaming a field is always a conflict (appears as remove + add). Field reordering is not a conflict.
+- **D-07:** **Conflict definition (strict — v1):** A conflict is triggered by **any** difference between the persisted `EventSchemaDef` and the compiled `Event::schema()` — field removed, field added, field renamed, or `FieldType` changed. The only non-conflict difference is field reordering (the set of `(name, field_type)` pairs must be equal). Rationale: strict equality is simple, unambiguous, and makes schema evolution an explicit, deliberate act rather than an accidental drift. Non-breaking evolution (additive changes, aliases, defaults for missing fields) and schema migration are deferred — see `.planning/todos/pending/non-breaking-schema-evolution.md`.
 
 - **D-08:** **Validator uses both DB and code schemas (union):** On startup and at ProjectionDefinition registration, the validator resolves schemas from the union of (a) persisted `EventSchemaDef`s from the store and (b) `Event::schema()` from all registered compiled types. This solves the bootstrap problem: in a new environment with no events yet, schemas come entirely from code. Over time, the DB becomes the complete historical record. If a Rust event type is later deleted, the persisted schema remains usable by the projection engine for historical events.
 
@@ -361,7 +361,10 @@ projection CustomerView {
 ## Deferred Ideas
 
 ### Projection-aware schema conflict detection
-Tracked in `.planning/todos/pending/projection-aware-schema-conflict.md`. Currently using simple semantic checking (field removed or retyped = conflict). Opportunity to tighten: only flag a conflict if a registered `ProjectionDefinition` references the changed field. Defer until `EventSchemaStore` and projection registration are both stable.
+Tracked in `.planning/todos/pending/projection-aware-schema-conflict.md`. Currently using strict equality (any difference = conflict). Opportunity to tighten: only flag a conflict if a registered `ProjectionDefinition` references the changed field. Defer until `EventSchemaStore` and projection registration are both stable.
+
+### Non-breaking schema evolution and schema migration
+Tracked in `.planning/todos/pending/non-breaking-schema-evolution.md`. v1 uses strict equality (D-07) — any schema drift is a conflict. Future work: allow additive changes (new fields, with defaults or nullable for historical events), aliases for renames, and an explicit schema migration path (versioned `EventSchemaDef`s, transform functions for reading old payloads). Defer until real-world evolution pressure shows which patterns matter.
 
 ### Joins (Phase 5)
 Full join design is locked in this context (see Phase 5 extension schema) but not implemented. Phase 5 adds `joins` object at root and list levels, and `join` as an object on fields (alias → events map). The `on` field resolves against the containing projection state to find the joined stream ID.
@@ -387,3 +390,4 @@ Optional trait `ReadModelStore<M: ReadModel>` for users who want to persist read
 
 *Phase: 04-projection-engine-single-stream*
 *Context updated: 2026-04-12 (D-34 alias scoping locked — primary stream unaliased in JSON, joins carry alias prefix in Phase 5; OQ-JOIN-01 added for `on` key mandatory-ness)*
+*Context updated: 2026-04-12 (D-07 tightened to strict equality — any schema drift is a conflict; non-breaking evolution + migration deferred to todo)*
