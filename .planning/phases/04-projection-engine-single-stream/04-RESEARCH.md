@@ -22,7 +22,7 @@
 
 5. **`#[serde(deny_unknown_fields)]` satisfies success criterion 5** (clear error on unknown JSON fields), but it conflicts with `#[serde(flatten)]` and has a subtle interaction with `#[serde(tag = "type")]` internally-tagged enums. Place `deny_unknown_fields` on variant structs, not on the enum itself.
 
-6. **JSON path traversal for Phase 4 (`$.a`, `$.a.b`) is simple enough to hand-roll** (< 20 lines, split on `.`, traverse `serde_json::Value`). No external JSON path library needed. Arrays in payloads are an acknowledged deferred limitation.
+6. **JSON path traversal uses `serde_json_path` (RFC 9535).** Initially assessed as hand-rollable for Phase 4's simple `$.a`/`$.a.b` paths, but `serde_json_path` was adopted instead: (a) Phase 4.1 list fields will need array traversal — adopting it now avoids replacing the evaluator mid-stream; (b) path strings in `ProjectionDefinition` are validated RFC 9535 expressions, not a bespoke subset; (c) the builder validates paths at definition-construction time using `JsonPath::parse()`, so the engine can evaluate without error-handling overhead. Add `serde_json_path = "0.7"` (confirm latest 0.x version) to workspace dependencies.
 
 ---
 
