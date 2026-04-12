@@ -172,6 +172,8 @@ The authoritative schema. Phase 4 implements `query` + scalar fields + nested ob
 
 Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` — the validator resolves it from the referenced `EventSchemaDef` (D-16).
 
+**Alias scoping in JSON (D-34):** Aliases are **not** present in the Phase 4 JSON schema. Event handler keys are bare event type names (e.g., `"CustomerRegistered"`) and implicitly reference the primary `query`'s stream. Phase 5 introduces aliased event keys (`"alias.EventType"`) **only for joined streams**. The primary stream's events remain unaliased forever — this is a forward-compatible design with no breaking change in Phase 5. The DSL alias (`query tag.starts_with("customer:") as c`) is a DSL-only ergonomic convenience; the macro strips it when emitting JSON for Phase 4 projections.
+
 **Phase 5 extension (design direction, not implemented in Phase 4):**
 ```json
 {
@@ -199,7 +201,9 @@ Note: `type` is **not** specified on scalar fields in `ProjectionDefinition` —
   }
 }
 ```
-Note: Join resolution mechanism (how the engine determines which `user:X` stream to join) is a Phase 5 open question. The `for` keyword from earlier design is under review.
+Note: Join resolution mechanism (how the engine determines which `user:X` stream to join) is a Phase 5 open question — see OQ-JOIN-01 below. The `for` keyword from earlier design is under review.
+
+**OQ-JOIN-01 — Is an explicit `on` key mandatory for every join?** The current inclination is yes: a join needs a resolution key (e.g., `"on": "$.accountant_id"` — a path into the *projection state*) so the engine can determine which joined-stream instance to read. An implicit join (no `on`) only makes sense if the semantic is "fold all events from all streams matching this query" — that is closer to a global projection / GROUP BY, not a join, and belongs to a different feature. Phase 5 discussion must decide whether implicit joins are supported at all, or whether every `join` block requires an `on` field.
 
 ### Schema Design Rules
 
@@ -279,8 +283,8 @@ projection CustomerView {
 - Required and default are independent: `|? value` sets initial state regardless of `?:` suffix.
 - `field_name { ... }` — nested object block. Contains projected fields that follow the same `events` → handler rules as top-level scalars.
 - `field_name? { ... } cleared_by alias.EventType` — optional nested object with a clear trigger. When the specified event fires, the entire object becomes null.
-- `query tag.starts_with("X:") as alias` declares the primary stream. Alias used to reference events.
-- `join tag.starts_with("X:") as alias` — Phase 5. Can be declared at root or inside a nested object block (object-scoped join). Join key resolution mechanism is a Phase 5 open question — `for EventType` syntax from earlier design is under review.
+- `query tag.starts_with("X:") as alias` declares the primary stream. The alias is a **DSL-only ergonomic convenience** — it is stripped when the macro emits JSON for Phase 4 (event keys in JSON are bare event type names). See D-34.
+- `join tag.starts_with("X:") as alias` — Phase 5. Can be declared at root or inside a nested object block (object-scoped join). In Phase 5 JSON, joined-stream event handlers use `alias.EventType` keys (the alias is **preserved** in JSON for joins, unlike the primary query). Join key resolution mechanism is open (OQ-JOIN-01) — `for EventType` syntax from earlier design is under review.
 
 **Resolved items (previously open):**
 - `$tags` removed: Tag-based key resolution (`$tags.item`) dropped entirely. Tags are for consistency boundaries (`TagFilter`, `AppendCondition`); projections use payload field paths for all identity and data resolution. Rationale: (a) no enforced `key:value` tag format, (b) batch events with multiple same-prefix tags break the single-value assumption, (c) same-prefix multi-role events (e.g., two `user:` tags for accountant and responsible) are ambiguous.
@@ -382,4 +386,4 @@ Optional trait `ReadModelStore<M: ReadModel>` for users who want to persist read
 ---
 
 *Phase: 04-projection-engine-single-stream*
-*Context updated: 2026-04-06 (macro DSL discussion in progress — removed_by and list joins unresolved)*
+*Context updated: 2026-04-12 (D-34 alias scoping locked — primary stream unaliased in JSON, joins carry alias prefix in Phase 5; OQ-JOIN-01 added for `on` key mandatory-ness)*
