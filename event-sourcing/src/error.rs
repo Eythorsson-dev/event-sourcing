@@ -3,7 +3,7 @@ use crate::types::GlobalSequenceId;
 
 /// Condition for optimistic concurrency on append.
 /// Semantics: fail if any events matching `query` have been appended after position `after`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct AppendCondition {
     pub query: Query,
     pub after: GlobalSequenceId,
@@ -44,6 +44,17 @@ mod tests {
             query: Query::all(),
             after: GlobalSequenceId::ZERO,
         };
+    }
+
+    #[test]
+    fn append_condition_serde_roundtrip() {
+        let original = AppendCondition {
+            query: Query::all(),
+            after: GlobalSequenceId::ZERO,
+        };
+        let json = serde_json::to_string(&original).unwrap();
+        let decoded: AppendCondition = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, original);
     }
 
     #[test]
