@@ -95,7 +95,11 @@ Plans:
   4. `InMemoryLogStore` evaluates `TagFilter` correctly when matching stored events against query criteria — `starts_with("order:")` matches `order:o1` and `order:o2` but not `product:p1`
   5. All tests from Phases 01–03.1 pass without modification — the change is backwards-compatible for exact-match use cases
   6. `AppendCondition.query` continues to express per-instance consistency checks using `TagFilter::Equals`
-**Plans**: TBD
+**Plans:** 2 plans
+
+Plans:
+- [ ] 03.2-01-PLAN.md — Introduce TagFilter enum, update Criterion, add serde to Query tree, and cover evaluation + round-trip with unit tests
+- [ ] 03.2-02-PLAN.md — Integration tests: InMemoryLogStore evaluates all TagFilter variants and AppendCondition with StartsWith detects cross-instance conflicts
 
 ### Phase 4: Projection Engine — Single-Stream (Scalars and Nested Objects)
 **Goal**: A caller can describe a single-stream projection with scalar fields and nested objects using a DSL macro that generates the read model struct, Projection trait impl, and JSON-serializable definition — then run it over a stored stream and get back a typed result
