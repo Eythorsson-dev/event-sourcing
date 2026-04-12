@@ -64,8 +64,14 @@ impl Query {
     }
 
     /// Match events carrying ALL of the specified tags.
+    /// If `tags` is empty, returns `Query::all()` — vacuously true semantics from `And([])`.
+    /// Pass at least one tag to create a selective filter.
     pub fn match_tags(tags: impl IntoIterator<Item = Tag>) -> Self {
         let filters: Vec<TagFilter> = tags.into_iter().map(TagFilter::Equals).collect();
+        // And([]) is vacuously true — treat as match-all rather than silently surprising callers.
+        if filters.is_empty() {
+            return Query::all();
+        }
         Query {
             criteria: vec![Criterion {
                 event_types: HashSet::new(),
