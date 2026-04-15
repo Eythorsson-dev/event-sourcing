@@ -16,7 +16,7 @@ pub use event::StoredEvent;
 pub use event_log::{EventLog, EventLogError, EventStreamExt, StreamError};
 pub use query::{Criterion, Query, TagFilter};
 pub use store::LogStore;
-pub use types::{GlobalSequenceId, InvalidTag, NewEvent, Tag};
+pub use types::{EventType, GlobalSequenceId, InvalidEventType, InvalidTag, NewEvent, Tag};
 
 #[cfg(test)]
 mod tests {
@@ -31,7 +31,7 @@ mod tests {
         let _tag = Tag::new("course:c1").unwrap();
         let _gseq = GlobalSequenceId::new(1);
         let _new_event = NewEvent {
-            event_type: "test".to_string(),
+            event_type: EventType::from("test"),
             payload: serde_json::json!({}),
             tags: std::collections::HashSet::new(),
         };

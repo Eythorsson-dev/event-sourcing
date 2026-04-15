@@ -146,7 +146,7 @@ mod tests {
     use std::collections::HashSet;
 
     use super::*;
-    use event_sourcing::Tag;
+    use event_sourcing::{EventType, Tag};
     use futures::StreamExt;
 
     fn tag(s: &str) -> Tag {
@@ -159,7 +159,7 @@ mod tests {
 
     fn test_event(event_type: &str, tag_strs: &[&str]) -> NewEvent {
         NewEvent {
-            event_type: event_type.to_string(),
+            event_type: EventType::from(event_type),
             payload: serde_json::json!({"test": true}),
             tags: tags(tag_strs),
         }
@@ -225,8 +225,8 @@ mod tests {
         let events: Vec<_> = stream.collect::<Vec<_>>().await;
 
         assert_eq!(events.len(), 2);
-        assert_eq!(events[0].as_ref().unwrap().event_type, "E1");
-        assert_eq!(events[1].as_ref().unwrap().event_type, "E3");
+        assert_eq!(events[0].as_ref().unwrap().event_type.as_str(), "E1");
+        assert_eq!(events[1].as_ref().unwrap().event_type.as_str(), "E3");
     }
 
     #[tokio::test]
@@ -257,7 +257,7 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert!(events
             .iter()
-            .all(|e| e.as_ref().unwrap().event_type == "OrderPlaced"));
+            .all(|e| e.as_ref().unwrap().event_type.as_str() == "OrderPlaced"));
     }
 
     #[tokio::test]
@@ -516,7 +516,10 @@ mod tests {
         let events: Vec<_> = stream.collect::<Vec<_>>().await;
 
         assert_eq!(events.len(), 1);
-        assert_eq!(events[0].as_ref().unwrap().event_type, "OrderPlaced");
+        assert_eq!(
+            events[0].as_ref().unwrap().event_type.as_str(),
+            "OrderPlaced"
+        );
     }
 
     #[tokio::test]

@@ -1,6 +1,48 @@
 use std::collections::HashSet;
 use std::fmt;
 
+/// Error returned when an empty event type is provided.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("event type must not be empty")]
+pub struct InvalidEventType;
+
+/// An opaque event type identifier. Non-empty.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+#[serde(transparent)]
+pub struct EventType(String);
+
+impl EventType {
+    pub fn new(value: impl Into<String>) -> Result<Self, InvalidEventType> {
+        let value = value.into();
+        if value.is_empty() {
+            return Err(InvalidEventType);
+        }
+        Ok(EventType(value))
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl fmt::Display for EventType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<&str> for EventType {
+    fn from(s: &str) -> Self {
+        EventType::new(s).expect("EventType must not be empty")
+    }
+}
+
+impl From<String> for EventType {
+    fn from(s: String) -> Self {
+        EventType::new(s).expect("EventType must not be empty")
+    }
+}
+
 /// Error returned when an empty tag is provided.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 #[error("tag must not be empty")]
@@ -67,7 +109,7 @@ impl fmt::Display for GlobalSequenceId {
 /// An event submitted for appending. No sequence IDs or timestamp — those are assigned by the store.
 #[derive(Debug, Clone)]
 pub struct NewEvent {
-    pub event_type: String,
+    pub event_type: EventType,
     pub payload: serde_json::Value,
     pub tags: HashSet<Tag>,
 }
@@ -120,13 +162,36 @@ mod tests {
     }
 
     #[test]
+    fn event_type_new_valid() {
+        let et = EventType::new("OrderPlaced").unwrap();
+        assert_eq!(et.as_str(), "OrderPlaced");
+    }
+
+    #[test]
+    fn event_type_new_empty_returns_error() {
+        assert_eq!(EventType::new(""), Err(InvalidEventType));
+    }
+
+    #[test]
+    fn event_type_from_str() {
+        let et = EventType::from("OrderPlaced");
+        assert_eq!(et.as_str(), "OrderPlaced");
+    }
+
+    #[test]
+    fn event_type_display() {
+        let et = EventType::from("OrderPlaced");
+        assert_eq!(et.to_string(), "OrderPlaced");
+    }
+
+    #[test]
     fn new_event_can_be_constructed() {
         let event = NewEvent {
-            event_type: "OrderPlaced".to_string(),
+            event_type: EventType::from("OrderPlaced"),
             payload: serde_json::json!({"order_id": "123"}),
             tags: [Tag::new("order:o1").unwrap()].into_iter().collect(),
         };
-        assert_eq!(event.event_type, "OrderPlaced");
+        assert_eq!(event.event_type.as_str(), "OrderPlaced");
         assert_eq!(event.tags.len(), 1);
     }
 
