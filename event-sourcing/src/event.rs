@@ -1,4 +1,4 @@
-use crate::types::{GlobalSequenceId, Tag};
+use crate::types::{EventType, GlobalSequenceId, Tag};
 use std::collections::HashSet;
 use std::time::SystemTime;
 
@@ -8,7 +8,7 @@ use std::time::SystemTime;
 #[derive(Debug, Clone)]
 pub struct StoredEvent {
     pub global_sequence: GlobalSequenceId,
-    pub event_type: String,
+    pub event_type: EventType,
     pub payload: serde_json::Value,
     pub tags: HashSet<Tag>,
     pub timestamp: SystemTime,
@@ -22,12 +22,12 @@ mod tests {
     fn stored_event_can_be_constructed() {
         let event = StoredEvent {
             global_sequence: GlobalSequenceId::new(1),
-            event_type: "OrderPlaced".to_string(),
+            event_type: EventType::from("OrderPlaced"),
             payload: serde_json::json!({"order_id": "123"}),
             tags: [Tag::new("order:o1").unwrap()].into_iter().collect(),
             timestamp: SystemTime::now(),
         };
-        assert_eq!(event.event_type, "OrderPlaced");
+        assert_eq!(event.event_type.as_str(), "OrderPlaced");
         assert_eq!(event.global_sequence.get(), 1);
         assert_eq!(event.tags.len(), 1);
     }

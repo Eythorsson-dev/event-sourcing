@@ -168,14 +168,14 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::GlobalSequenceId;
+    use crate::types::{EventType, GlobalSequenceId};
     use std::collections::HashSet;
     use std::time::SystemTime;
 
     fn make_stored_event(seq: u64, event_type: &str) -> StoredEvent {
         StoredEvent {
             global_sequence: GlobalSequenceId::new(seq),
-            event_type: event_type.to_string(),
+            event_type: EventType::from(event_type),
             payload: serde_json::json!({}),
             tags: HashSet::new(),
             timestamp: SystemTime::now(),
@@ -216,7 +216,7 @@ mod tests {
         let stream = futures::stream::iter(vec![Ok::<StoredEvent, StoreError>(event.clone())]);
         let result = stream.single().await;
         assert!(result.is_ok());
-        assert_eq!(result.unwrap().event_type, "OrderPlaced");
+        assert_eq!(result.unwrap().event_type.as_str(), "OrderPlaced");
     }
 
     #[tokio::test]
@@ -250,7 +250,7 @@ mod tests {
         assert!(result.is_ok());
         let opt = result.unwrap();
         assert!(opt.is_some());
-        assert_eq!(opt.unwrap().event_type, "E1");
+        assert_eq!(opt.unwrap().event_type.as_str(), "E1");
     }
 
     #[tokio::test]

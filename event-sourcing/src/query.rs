@@ -1,5 +1,5 @@
 use crate::event::StoredEvent;
-use crate::types::Tag;
+use crate::types::{EventType, Tag};
 use std::collections::HashSet;
 
 /// Expressive tag filter for event matching within a Criterion.
@@ -41,7 +41,7 @@ impl TagFilter {
 /// - tag_filter is None OR tag_filter.matches(event.tags)
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct Criterion {
-    pub event_types: HashSet<String>,
+    pub event_types: HashSet<EventType>,
     pub tag_filter: Option<TagFilter>,
 }
 
@@ -81,7 +81,7 @@ impl Query {
     }
 
     /// Match events of any of the specified event types.
-    pub fn match_event_types(event_types: impl IntoIterator<Item = impl Into<String>>) -> Self {
+    pub fn match_event_types(event_types: impl IntoIterator<Item = impl Into<EventType>>) -> Self {
         Query {
             criteria: vec![Criterion {
                 event_types: event_types.into_iter().map(Into::into).collect(),
@@ -128,7 +128,7 @@ mod tests {
     fn make_event(event_type: &str, tag_strs: &[&str]) -> StoredEvent {
         StoredEvent {
             global_sequence: GlobalSequenceId::new(1),
-            event_type: event_type.to_string(),
+            event_type: EventType::from(event_type),
             payload: serde_json::json!({}),
             tags: tag_strs.iter().map(|s| Tag::new(*s).unwrap()).collect(),
             timestamp: SystemTime::now(),
@@ -175,7 +175,7 @@ mod tests {
     fn query_criterion_and_semantics() {
         // Criterion requires BOTH tag "a" AND event type "X"
         let criterion = Criterion {
-            event_types: ["X".to_string()].into_iter().collect(),
+            event_types: [EventType::from("X")].into_iter().collect(),
             tag_filter: Some(TagFilter::Equals(Tag::new("a").unwrap())),
         };
         let q = Query {
@@ -194,7 +194,7 @@ mod tests {
     #[test]
     fn query_or_semantics() {
         let q = Query::match_tags([Tag::new("a").unwrap()]).or(Criterion {
-            event_types: ["X".to_string()].into_iter().collect(),
+            event_types: [EventType::from("X")].into_iter().collect(),
             tag_filter: None,
         });
 

@@ -1,6 +1,6 @@
 use event_sourcing::{
-    AppendCondition, EventLog, EventLogError, EventStreamExt, GlobalSequenceId, NewEvent, Query,
-    StreamError, Tag,
+    AppendCondition, EventLog, EventLogError, EventStreamExt, EventType, GlobalSequenceId,
+    NewEvent, Query, StreamError, Tag,
 };
 use event_sourcing_logstore_inmemory::InMemoryLogStore;
 use std::collections::HashSet;
@@ -15,7 +15,7 @@ fn tags(ts: &[&str]) -> HashSet<Tag> {
 
 fn new_event(event_type: &str, tag_strs: &[&str]) -> NewEvent {
     NewEvent {
-        event_type: event_type.to_string(),
+        event_type: EventType::from(event_type),
         payload: serde_json::json!({}),
         tags: tags(tag_strs),
     }
@@ -129,7 +129,7 @@ async fn query_by_event_type_returns_only_matching_events() {
     let events: Vec<_> = events.into_iter().map(|e| e.unwrap()).collect();
 
     assert_eq!(events.len(), 2);
-    assert!(events.iter().all(|e| e.event_type == "X"));
+    assert!(events.iter().all(|e| e.event_type.as_str() == "X"));
 }
 
 #[tokio::test]
@@ -314,7 +314,7 @@ async fn single_returns_exactly_one_event() {
 
     let result = stream.single().await;
     assert!(result.is_ok());
-    assert_eq!(result.unwrap().event_type, "OrderPlaced");
+    assert_eq!(result.unwrap().event_type.as_str(), "OrderPlaced");
 }
 
 #[tokio::test]
@@ -373,7 +373,7 @@ async fn first_returns_first_event() {
     assert!(result.is_ok());
     let opt = result.unwrap();
     assert!(opt.is_some());
-    assert_eq!(opt.unwrap().event_type, "E1");
+    assert_eq!(opt.unwrap().event_type.as_str(), "E1");
 }
 
 #[tokio::test]
