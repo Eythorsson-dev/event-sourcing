@@ -7,6 +7,7 @@ pub mod error;
 pub mod event;
 pub mod event_log;
 pub mod query;
+pub mod schema;
 pub mod store;
 pub mod types;
 
@@ -15,6 +16,7 @@ pub use error::{AppendCondition, AppendError, StoreError};
 pub use event::StoredEvent;
 pub use event_log::{EventLog, EventLogError, EventStreamExt, StreamError};
 pub use query::{Criterion, Query, TagFilter};
+pub use schema::{Event, EventSchemaDef, FieldDef, FieldType};
 pub use store::LogStore;
 pub use types::{EventType, GlobalSequenceId, InvalidEventType, InvalidTag, NewEvent, Tag};
 
