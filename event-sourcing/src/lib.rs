@@ -16,6 +16,7 @@ pub use error::{AppendCondition, AppendError, StoreError};
 pub use event::StoredEvent;
 pub use event_log::{EventLog, EventLogError, EventStreamExt, StreamError};
 pub use query::{Criterion, Query, TagFilter};
+pub use schema::{Event, EventSchemaDef, FieldDef, FieldType};
 pub use store::LogStore;
 pub use types::{EventType, GlobalSequenceId, InvalidEventType, InvalidTag, NewEvent, Tag};
 
