@@ -1,8 +1,10 @@
-use crate::error::{AppendCondition, AppendError, StoreError};
+use crate::error::{AppendCondition, AppendError, SchemaConflictError, StoreError};
 use crate::event::StoredEvent;
 use crate::query::Query;
+use crate::schema::EventSchemaDef;
+use crate::schema_store::{EventSchemaStore, NoOpEventSchemaStore};
 use crate::store::LogStore;
-use crate::types::{GlobalSequenceId, NewEvent};
+use crate::types::{EventType, GlobalSequenceId, NewEvent};
 use futures_core::Stream;
 
 /// Error from EventLog operations. Distinct from AppendError and StoreError.
@@ -19,6 +21,13 @@ pub enum EventLogError {
 
     #[error("storage failure: {0}")]
     StorageFailure(#[source] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("schema conflict for event type '{event_type}'")]
+    SchemaConflict {
+        event_type: EventType,
+        expected: EventSchemaDef,
+        actual: EventSchemaDef,
+    },
 }
 
 /// Error from consuming an event stream with single() or similar operations.
@@ -34,15 +43,24 @@ pub enum StreamError {
 
 /// Orchestrates event log operations over a `LogStore` backend.
 /// Provides a stable user-facing API that decouples callers from storage implementation details.
+///
+/// The second type parameter `E` is the `EventSchemaStore` implementation used for schema
+/// tracking. Defaults to `NoOpEventSchemaStore` so existing `EventLog<S>` call sites compile
+/// unchanged (D-09 from Phase 4 context).
 #[derive(Clone)]
-pub struct EventLog<S: LogStore> {
+pub struct EventLog<S: LogStore, E: EventSchemaStore = NoOpEventSchemaStore> {
     store: S,
+    schema_store: E,
 }
 
-impl<S: LogStore> EventLog<S> {
-    /// Construct an EventLog wrapping the given store.
-    pub fn new(store: S) -> Self {
-        Self { store }
+impl<S: LogStore, E: EventSchemaStore> EventLog<S, E> {
+    /// Construct an EventLog wrapping the given store and a custom schema store.
+    /// Use `EventLog::new(store)` for the common case where schema tracking is not needed.
+    pub fn with_schema_store(store: S, schema_store: E) -> Self {
+        Self {
+            store,
+            schema_store,
+        }
     }
 
     /// Append events with an optional concurrency check.
@@ -65,6 +83,15 @@ impl<S: LogStore> EventLog<S> {
                     checked_after,
                 },
                 AppendError::StorageFailure(source) => EventLogError::StorageFailure(source),
+                AppendError::SchemaConflict {
+                    event_type,
+                    expected,
+                    actual,
+                } => EventLogError::SchemaConflict {
+                    event_type,
+                    expected,
+                    actual,
+                },
             })
     }
 
@@ -81,6 +108,68 @@ impl<S: LogStore> EventLog<S> {
     /// Get the current highest global sequence ID.
     pub async fn current_sequence(&self) -> Result<GlobalSequenceId, StoreError> {
         self.store.current_sequence().await
+    }
+
+    /// Startup schema validation check (D-06, D-08).
+    ///
+    /// Compares all `EventSchemaDef`s in `code_schemas` against every persisted schema in the
+    /// schema store. Returns the first `SchemaConflictError::Conflict` found, or `Ok(())` if
+    /// all schemas are compatible (or no persisted schemas exist yet).
+    ///
+    /// This is explicit and opt-in — the library never panics. The application calls this at
+    /// startup and handles the result.
+    pub async fn validate_schemas(
+        &self,
+        code_schemas: impl IntoIterator<Item = EventSchemaDef>,
+    ) -> Result<(), SchemaConflictError> {
+        let persisted =
+            self.schema_store
+                .fetch_all()
+                .await
+                .map_err(|_e| SchemaConflictError::Conflict {
+                    event_type: EventType::from("unknown"),
+                    expected: EventSchemaDef {
+                        event_type: EventType::from(""),
+                        fields: vec![],
+                    },
+                    actual: EventSchemaDef {
+                        event_type: EventType::from(""),
+                        fields: vec![],
+                    },
+                })?;
+
+        let persisted_map: std::collections::HashMap<String, EventSchemaDef> = persisted
+            .into_iter()
+            .map(|s| (s.event_type.to_string(), s))
+            .collect();
+
+        for code_schema in code_schemas {
+            if let Some(persisted_schema) = persisted_map.get(code_schema.event_type.as_str()) {
+                if !persisted_schema.is_compatible_with(&code_schema) {
+                    return Err(SchemaConflictError::Conflict {
+                        event_type: code_schema.event_type.clone(),
+                        expected: persisted_schema.clone(),
+                        actual: code_schema,
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
+/// Convenience constructors for `EventLog<S, NoOpEventSchemaStore>`.
+/// The single-argument `new(store)` constructor preserves backward compatibility —
+/// existing call sites that only pass a store continue to compile unchanged (D-09).
+impl<S: LogStore> EventLog<S, NoOpEventSchemaStore> {
+    /// Construct an EventLog with no schema tracking.
+    /// Backward-compatible single-argument constructor.
+    pub fn new(store: S) -> Self {
+        Self {
+            store,
+            schema_store: NoOpEventSchemaStore,
+        }
     }
 }
 
@@ -168,6 +257,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::schema::{EventSchemaDef, FieldDef, FieldType};
     use crate::types::{EventType, GlobalSequenceId};
     use std::collections::HashSet;
     use std::time::SystemTime;
@@ -179,6 +269,21 @@ mod tests {
             payload: serde_json::json!({}),
             tags: HashSet::new(),
             timestamp: SystemTime::now(),
+        }
+    }
+
+    fn make_schema(event_type: &str, fields: Vec<FieldDef>) -> EventSchemaDef {
+        EventSchemaDef {
+            event_type: EventType::from(event_type),
+            fields,
+        }
+    }
+
+    fn field(name: &str) -> FieldDef {
+        FieldDef {
+            name: name.to_owned(),
+            field_type: FieldType::String,
+            optional: false,
         }
     }
 
@@ -259,5 +364,53 @@ mod tests {
         let result = stream.first().await;
         assert!(result.is_ok());
         assert!(result.unwrap().is_none());
+    }
+
+    // Minimal mock LogStore for unit tests that don't need real storage.
+    use crate::error::AppendCondition;
+    use crate::store::LogStore;
+    use futures::stream;
+    use futures::stream::Iter;
+
+    struct NullLogStore;
+
+    impl LogStore for NullLogStore {
+        type EventStream = Iter<std::vec::IntoIter<Result<StoredEvent, StoreError>>>;
+
+        async fn append(
+            &self,
+            _events: Vec<NewEvent>,
+            _condition: Option<AppendCondition>,
+        ) -> Result<GlobalSequenceId, AppendError> {
+            Ok(GlobalSequenceId::ZERO)
+        }
+
+        async fn query(
+            &self,
+            _query: Query,
+            _from: GlobalSequenceId,
+        ) -> Result<Self::EventStream, StoreError> {
+            Ok(stream::iter(vec![]))
+        }
+
+        async fn current_sequence(&self) -> Result<GlobalSequenceId, StoreError> {
+            Ok(GlobalSequenceId::ZERO)
+        }
+    }
+
+    // validate_schemas tests
+
+    #[tokio::test]
+    async fn validate_schemas_ok_when_no_persisted() {
+        let log = EventLog::with_schema_store(NullLogStore, NoOpEventSchemaStore);
+        let schema_a = make_schema("OrderPlaced", vec![field("id")]);
+        let result = log.validate_schemas([schema_a]).await;
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn event_log_compiles_with_default_type_param() {
+        // Verify EventLog<S> (one type param, default E) compiles with single-arg new.
+        let _log: EventLog<NullLogStore> = EventLog::new(NullLogStore);
     }
 }

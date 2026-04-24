@@ -392,3 +392,66 @@ async fn first_returns_none_on_empty() {
     assert!(result.is_ok());
     assert!(result.unwrap().is_none());
 }
+
+// validate_schemas integration tests — require InMemoryEventSchemaStore from Task 4
+
+use event_sourcing::error::SchemaConflictError;
+use event_sourcing::schema::{EventSchemaDef, FieldDef, FieldType};
+use event_sourcing::schema_store::EventSchemaStore;
+use event_sourcing_logstore_inmemory::InMemoryEventSchemaStore;
+
+fn make_schema(event_type: &str, fields: Vec<FieldDef>) -> EventSchemaDef {
+    EventSchemaDef {
+        event_type: EventType::from(event_type),
+        fields,
+    }
+}
+
+fn field(name: &str) -> FieldDef {
+    FieldDef {
+        name: name.to_owned(),
+        field_type: FieldType::String,
+        optional: false,
+    }
+}
+
+#[tokio::test]
+async fn validate_schemas_ok_when_schemas_match() {
+    use event_sourcing::EventLog;
+
+    let schema_a = make_schema("OrderPlaced", vec![field("id"), field("amount")]);
+    let schema_store = InMemoryEventSchemaStore::new();
+    schema_store.record_if_new(&schema_a).await.unwrap();
+
+    let log = EventLog::with_schema_store(InMemoryLogStore::new(), schema_store);
+    let result = log
+        .validate_schemas([make_schema(
+            "OrderPlaced",
+            vec![field("id"), field("amount")],
+        )])
+        .await;
+    assert!(result.is_ok(), "matching schemas should return Ok");
+}
+
+#[tokio::test]
+async fn validate_schemas_err_when_schema_differs() {
+    use event_sourcing::EventLog;
+
+    // Persisted: OrderPlaced with 2 fields
+    let schema_persisted = make_schema("OrderPlaced", vec![field("id"), field("amount")]);
+    let schema_store = InMemoryEventSchemaStore::new();
+    schema_store.record_if_new(&schema_persisted).await.unwrap();
+
+    // Code schema: OrderPlaced with different field
+    let schema_code = make_schema("OrderPlaced", vec![field("id"), field("total")]);
+
+    let log = EventLog::with_schema_store(InMemoryLogStore::new(), schema_store);
+    let result = log.validate_schemas([schema_code]).await;
+
+    match result {
+        Err(SchemaConflictError::Conflict { event_type, .. }) => {
+            assert_eq!(event_type.as_str(), "OrderPlaced");
+        }
+        Ok(_) => panic!("expected SchemaConflictError::Conflict, got Ok"),
+    }
+}
