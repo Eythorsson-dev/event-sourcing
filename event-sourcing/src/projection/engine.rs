@@ -34,6 +34,9 @@ pub trait ReadModel: serde::de::DeserializeOwned {
 /// they should not inspect or modify its internals.
 pub struct ProjectionCheckpoint {
     pub(crate) raw_state: Value,
+    /// Sequence ID of the last event folded. Opaque to external callers;
+    /// used internally and in tests to verify incremental fold position.
+    #[allow(dead_code)]
     pub(crate) last_sequence: GlobalSequenceId,
 }
 

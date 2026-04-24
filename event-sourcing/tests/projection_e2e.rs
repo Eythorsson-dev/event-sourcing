@@ -2,9 +2,7 @@
 //!
 //! Run with: cargo test -p event-sourcing --features macros --test projection_e2e
 
-use event_sourcing::{
-    projection, EventType, GlobalSequenceId, ProjectionEngine, StoredEvent,
-};
+use event_sourcing::{projection, EventType, GlobalSequenceId, ProjectionEngine, StoredEvent};
 use std::collections::HashSet;
 use std::time::SystemTime;
 
@@ -79,7 +77,10 @@ fn e2e_projection_clear_object() {
     let result: CustomerView = ProjectionEngine::project::<CustomerView>(events.into_iter())
         .expect("projection should succeed");
     assert_eq!(result.name, "Bob");
-    assert!(result.address.is_none(), "address should be cleared to None");
+    assert!(
+        result.address.is_none(),
+        "address should be cleared to None"
+    );
 }
 
 #[test]
