@@ -6,6 +6,7 @@
 pub mod error;
 pub mod event;
 pub mod event_log;
+pub mod projection;
 pub mod query;
 pub mod schema;
 pub mod store;
@@ -15,6 +16,10 @@ pub mod types;
 pub use error::{AppendCondition, AppendError, StoreError};
 pub use event::StoredEvent;
 pub use event_log::{EventLog, EventLogError, EventStreamExt, StreamError};
+pub use projection::{
+    FieldSpec, HandlerSpec, ObjectFieldSpec, ObjectFieldSpecBuilder, ProjectionDefinition,
+    ProjectionDefinitionBuilder, ScalarFieldSpec, ScalarFieldSpecBuilder,
+};
 pub use query::{Criterion, Query, TagFilter};
 pub use schema::{Event, EventSchemaDef, FieldDef, FieldType};
 pub use store::LogStore;
