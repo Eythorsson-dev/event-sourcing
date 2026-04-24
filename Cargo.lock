@@ -34,6 +34,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "event-sourcing-logstore-inmemory",
+ "event-sourcing-macros",
  "futures",
  "futures-core",
  "indexmap",
@@ -67,6 +68,16 @@ name = "event-sourcing-logstore-sqlite"
 version = "0.1.0"
 dependencies = [
  "event-sourcing",
+]
+
+[[package]]
+name = "event-sourcing-macros"
+version = "0.1.0"
+dependencies = [
+ "event-sourcing",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
