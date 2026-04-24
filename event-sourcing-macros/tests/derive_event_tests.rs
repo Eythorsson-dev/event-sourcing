@@ -1,6 +1,7 @@
 use event_sourcing::{Event as _, EventSchemaDef, FieldDef, FieldType};
 use event_sourcing_macros::Event;
 
+#[allow(dead_code)]
 #[derive(Event)]
 struct OrderPlaced {
     order_id: String,
@@ -32,6 +33,7 @@ fn derive_event_basic_struct() {
     assert!(!item_count_field.optional);
 }
 
+#[allow(dead_code)]
 #[derive(Event)]
 struct CustomerRegistered {
     name: String,
@@ -57,6 +59,7 @@ fn derive_event_option_field() {
     assert!(middle_field.optional);
 }
 
+#[allow(dead_code)]
 #[derive(Event)]
 struct AllTypesEvent {
     str_field: String,
