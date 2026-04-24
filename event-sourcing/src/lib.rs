@@ -33,6 +33,10 @@ pub use types::{EventType, GlobalSequenceId, InvalidEventType, InvalidTag, NewEv
 #[cfg(feature = "macros")]
 pub use event_sourcing_macros::Event as DeriveEvent;
 
+/// Re-export the `projection!` DSL macro when the `macros` feature is enabled.
+#[cfg(feature = "macros")]
+pub use event_sourcing_macros::projection;
+
 #[cfg(test)]
 mod tests {
     use super::*;
