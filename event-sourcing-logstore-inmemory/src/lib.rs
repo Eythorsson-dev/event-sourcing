@@ -1,7 +1,11 @@
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::SystemTime;
 
+use async_trait::async_trait;
 use event_sourcing::query::event_matches_query;
+use event_sourcing::schema::EventSchemaDef;
+use event_sourcing::schema_store::{EventSchemaError, EventSchemaStore};
 use event_sourcing::{
     AppendCondition, AppendError, GlobalSequenceId, LogStore, NewEvent, Query, StoreError,
     StoredEvent,
@@ -138,6 +142,46 @@ impl LogStore for InMemoryLogStore {
     async fn current_sequence(&self) -> Result<GlobalSequenceId, StoreError> {
         let state = self.inner.read().await;
         Ok(state.current_sequence())
+    }
+}
+
+/// In-memory implementation of `EventSchemaStore`.
+/// Backed by a `tokio::sync::RwLock<HashMap>` — append-only, clone shares state.
+#[derive(Clone)]
+pub struct InMemoryEventSchemaStore {
+    schemas: Arc<RwLock<HashMap<String, EventSchemaDef>>>,
+}
+
+impl InMemoryEventSchemaStore {
+    pub fn new() -> Self {
+        InMemoryEventSchemaStore {
+            schemas: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+}
+
+impl Default for InMemoryEventSchemaStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[async_trait]
+impl EventSchemaStore for InMemoryEventSchemaStore {
+    async fn record_if_new(&self, schema: &EventSchemaDef) -> Result<(), EventSchemaError> {
+        let mut guard = self.schemas.write().await;
+        guard
+            .entry(schema.event_type.to_string())
+            .or_insert_with(|| schema.clone());
+        Ok(())
+    }
+
+    async fn fetch_all(&self) -> Result<Vec<EventSchemaDef>, EventSchemaError> {
+        Ok(self.schemas.read().await.values().cloned().collect())
+    }
+
+    async fn fetch_one(&self, event_type: &str) -> Result<Option<EventSchemaDef>, EventSchemaError> {
+        Ok(self.schemas.read().await.get(event_type).cloned())
     }
 }
 
@@ -776,5 +820,76 @@ mod tests {
             .await;
 
         assert!(result.is_ok(), "expected Ok, got {:?}", result);
+    }
+
+    // InMemoryEventSchemaStore tests
+
+    fn make_schema(event_type: &str) -> event_sourcing::schema::EventSchemaDef {
+        use event_sourcing::schema::{EventSchemaDef, FieldDef, FieldType};
+        EventSchemaDef {
+            event_type: EventType::from(event_type),
+            fields: vec![FieldDef {
+                name: "id".to_owned(),
+                field_type: FieldType::String,
+                optional: false,
+            }],
+        }
+    }
+
+    fn make_schema_two_fields(event_type: &str) -> event_sourcing::schema::EventSchemaDef {
+        use event_sourcing::schema::{EventSchemaDef, FieldDef, FieldType};
+        EventSchemaDef {
+            event_type: EventType::from(event_type),
+            fields: vec![
+                FieldDef {
+                    name: "id".to_owned(),
+                    field_type: FieldType::String,
+                    optional: false,
+                },
+                FieldDef {
+                    name: "amount".to_owned(),
+                    field_type: FieldType::Integer,
+                    optional: false,
+                },
+            ],
+        }
+    }
+
+    #[tokio::test]
+    async fn record_if_new_stores_schema() {
+        let store = InMemoryEventSchemaStore::new();
+        let schema = make_schema("OrderPlaced");
+        store.record_if_new(&schema).await.unwrap();
+        let result = store.fetch_one("OrderPlaced").await.unwrap();
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), schema);
+    }
+
+    #[tokio::test]
+    async fn record_if_new_is_append_only() {
+        let store = InMemoryEventSchemaStore::new();
+        let schema_a = make_schema("OrderPlaced");
+        let schema_b = make_schema_two_fields("OrderPlaced");
+
+        // Record schema_a first
+        store.record_if_new(&schema_a).await.unwrap();
+        // Attempt to record schema_b for the same event type — should be ignored
+        store.record_if_new(&schema_b).await.unwrap();
+
+        // The first schema should persist
+        let result = store.fetch_one("OrderPlaced").await.unwrap().unwrap();
+        assert_eq!(result.fields.len(), 1, "first schema (1 field) should persist");
+    }
+
+    #[tokio::test]
+    async fn fetch_all_returns_all_stored() {
+        let store = InMemoryEventSchemaStore::new();
+        let schema_a = make_schema("OrderPlaced");
+        let schema_b = make_schema("OrderShipped");
+        store.record_if_new(&schema_a).await.unwrap();
+        store.record_if_new(&schema_b).await.unwrap();
+
+        let all = store.fetch_all().await.unwrap();
+        assert_eq!(all.len(), 2);
     }
 }
