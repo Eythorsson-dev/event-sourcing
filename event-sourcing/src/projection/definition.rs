@@ -112,6 +112,15 @@ impl HandlerSpec {
 // ── Scalar field spec ────────────────────────────────────────────────────────
 
 /// Scalar field spec within a ProjectionDefinition.
+///
+/// # Path validation
+///
+/// JSON path strings stored in `HandlerSpec::From`, `HandlerSpec::IncrementBy`, and
+/// `HandlerSpec::DecrementBy` are **only validated when using [`ScalarFieldSpecBuilder::on`]**.
+/// If you construct this struct directly (e.g., via `serde_json::from_value` or a struct
+/// literal), path strings are not checked at construction time. Invalid paths will produce
+/// a [`ProjectionError::InvalidPath`] at fold time via `evaluate_path`.
+/// Use the builder path for guaranteed early validation.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ScalarFieldSpec {
@@ -128,6 +137,16 @@ pub struct ScalarFieldSpec {
 // ── Object field spec ────────────────────────────────────────────────────────
 
 /// Nested object field spec within a ProjectionDefinition.
+///
+/// # Path validation and conflict detection
+///
+/// Sub-field path strings are validated only when the fields are built via
+/// [`ScalarFieldSpecBuilder::on`]. Direct struct construction (e.g., from deserialized JSON)
+/// bypasses this check; invalid paths surface as [`ProjectionError::InvalidPath`] at fold time.
+///
+/// Conflict detection between `cleared_by` and sub-field handlers is only enforced by
+/// [`ObjectFieldSpecBuilder::build`]. Structs constructed directly carry no such guarantee.
+/// Use the builder for both guarantees.
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ObjectFieldSpec {
