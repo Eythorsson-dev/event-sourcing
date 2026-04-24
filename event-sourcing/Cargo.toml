@@ -11,6 +11,10 @@ futures-core = { workspace = true }
 indexmap = { workspace = true }
 serde_json_path = { workspace = true }
 async-trait = { workspace = true }
+event-sourcing-macros = { path = "../event-sourcing-macros", optional = true }
+
+[features]
+macros = ["event-sourcing-macros"]
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }

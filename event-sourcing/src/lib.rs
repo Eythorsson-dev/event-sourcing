@@ -28,6 +28,11 @@ pub use schema_store::{EventSchemaError, EventSchemaStore, NoOpEventSchemaStore}
 pub use store::LogStore;
 pub use types::{EventType, GlobalSequenceId, InvalidEventType, InvalidTag, NewEvent, Tag};
 
+/// Re-export the `#[derive(Event)]` proc macro when the `macros` feature is enabled.
+/// Users add `use event_sourcing::DeriveEvent;` (or rely on the derive attribute directly).
+#[cfg(feature = "macros")]
+pub use event_sourcing_macros::Event as DeriveEvent;
+
 #[cfg(test)]
 mod tests {
     use super::*;
