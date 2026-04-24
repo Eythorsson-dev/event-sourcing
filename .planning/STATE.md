@@ -68,7 +68,9 @@ Plan: Not started
 
 ### Roadmap Evolution
 
-- Phase 4.1 inserted: List fields in projections (keyed collections with mutation/removal)
+- Phase 4.1 inserted: projection! macro syntax revision (cleaner DSL — no inner keyword, commas, unified `:` for objects, compile-time cleared_by enforcement)
+- Phase 4.2 inserted: List fields in projections (keyed collections with mutation/removal) — was 4.1
+- Phase 5 dependency updated: now depends on Phase 4.2
 - Phase 10 added: Examples directory
 - Phase 11 added: Update readme
 - Phase 12 added: Getting started docs + deploy to crates.io
