@@ -38,7 +38,11 @@ mod tests {
             path: "$.name".to_owned(),
         };
         let s = e.to_string();
-        assert!(s.contains("$.name"), "FieldNotFound display missing path: {}", s);
+        assert!(
+            s.contains("$.name"),
+            "FieldNotFound display missing path: {}",
+            s
+        );
         assert!(
             s.contains("CustomerRegistered"),
             "FieldNotFound display missing event_type: {}",
@@ -59,7 +63,15 @@ mod tests {
             actual: "String".to_owned(),
         };
         let s = e.to_string();
-        assert!(s.contains("count"), "TypeMismatch display missing field: {}", s);
-        assert!(s.contains("String"), "TypeMismatch display missing actual: {}", s);
+        assert!(
+            s.contains("count"),
+            "TypeMismatch display missing field: {}",
+            s
+        );
+        assert!(
+            s.contains("String"),
+            "TypeMismatch display missing actual: {}",
+            s
+        );
     }
 }
