@@ -9,6 +9,7 @@ pub mod event_log;
 pub mod projection;
 pub mod query;
 pub mod schema;
+pub mod schema_store;
 pub mod store;
 pub mod types;
 
