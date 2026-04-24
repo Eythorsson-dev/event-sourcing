@@ -9,6 +9,9 @@ pub enum ProjectionError {
     #[error("json path '{path}' not found in payload for event type '{event_type}'")]
     FieldNotFound { event_type: EventType, path: String },
 
+    #[error("invalid JSON path expression '{path}'")]
+    InvalidPath { path: String },
+
     #[error("deserialization failed: {0}")]
     DeserializationFailed(#[from] serde_json::Error),
 
