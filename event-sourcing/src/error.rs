@@ -1,5 +1,6 @@
 use crate::query::Query;
-use crate::types::GlobalSequenceId;
+use crate::schema::EventSchemaDef;
+use crate::types::{EventType, GlobalSequenceId};
 
 /// Condition for optimistic concurrency on append.
 /// Semantics: fail if any events matching `query` have been appended after position `after`.
@@ -23,6 +24,25 @@ pub enum AppendError {
 
     #[error("storage failure: {0}")]
     StorageFailure(#[source] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("schema conflict for event type '{event_type}'")]
+    SchemaConflict {
+        event_type: EventType,
+        expected: EventSchemaDef,
+        actual: EventSchemaDef,
+    },
+}
+
+/// Error returned by EventLog::validate_schemas() startup check.
+/// Indicates a persisted schema differs from the compiled event schema.
+#[derive(Debug, thiserror::Error)]
+pub enum SchemaConflictError {
+    #[error("schema conflict for event type '{event_type}': persisted schema differs from compiled schema")]
+    Conflict {
+        event_type: EventType,
+        expected: EventSchemaDef,
+        actual: EventSchemaDef,
+    },
 }
 
 /// Error from read operations (connection failures, mid-stream errors). Separate from AppendError.

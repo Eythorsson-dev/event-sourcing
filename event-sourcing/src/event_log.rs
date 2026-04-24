@@ -1,8 +1,9 @@
 use crate::error::{AppendCondition, AppendError, StoreError};
 use crate::event::StoredEvent;
 use crate::query::Query;
+use crate::schema::EventSchemaDef;
 use crate::store::LogStore;
-use crate::types::{GlobalSequenceId, NewEvent};
+use crate::types::{EventType, GlobalSequenceId, NewEvent};
 use futures_core::Stream;
 
 /// Error from EventLog operations. Distinct from AppendError and StoreError.
@@ -19,6 +20,13 @@ pub enum EventLogError {
 
     #[error("storage failure: {0}")]
     StorageFailure(#[source] Box<dyn std::error::Error + Send + Sync>),
+
+    #[error("schema conflict for event type '{event_type}'")]
+    SchemaConflict {
+        event_type: EventType,
+        expected: EventSchemaDef,
+        actual: EventSchemaDef,
+    },
 }
 
 /// Error from consuming an event stream with single() or similar operations.
@@ -65,6 +73,15 @@ impl<S: LogStore> EventLog<S> {
                     checked_after,
                 },
                 AppendError::StorageFailure(source) => EventLogError::StorageFailure(source),
+                AppendError::SchemaConflict {
+                    event_type,
+                    expected,
+                    actual,
+                } => EventLogError::SchemaConflict {
+                    event_type,
+                    expected,
+                    actual,
+                },
             })
     }
 
