@@ -300,6 +300,20 @@ impl ObjectFieldSpecBuilder {
     }
 
     pub fn build(self) -> ObjectFieldSpec {
+        // Detect conflicting event registrations: an event type in both cleared_by and a
+        // sub-field handler is ambiguous — cleared_by silently wins and the sub-field update
+        // is dropped, which is almost certainly a programming error.
+        for evt in &self.cleared_by {
+            for (sub_name, scalar) in &self.fields {
+                if scalar.events.contains_key(evt) {
+                    panic!(
+                        "event '{}' appears in both cleared_by and sub-field handler '{}'; \
+                         this is ambiguous — remove it from one",
+                        evt, sub_name
+                    );
+                }
+            }
+        }
         ObjectFieldSpec {
             field_type: "object".to_owned(),
             cleared_by: self.cleared_by,
