@@ -81,15 +81,14 @@ impl ProjectionEngine {
         new_events: impl Iterator<Item = StoredEvent>,
     ) -> Result<(M, ProjectionCheckpoint), ProjectionError> {
         let def = M::definition();
-        let mut state = match checkpoint {
-            Some(cp) => cp.raw_state,
+        let (mut state, mut last_sequence) = match checkpoint {
+            Some(cp) => (cp.raw_state, cp.last_sequence), // preserve position from existing checkpoint
             None => {
                 let mut s = Value::Object(Map::new());
                 Self::initialize_state(&def, &mut s);
-                s
+                (s, GlobalSequenceId::ZERO)
             }
         };
-        let mut last_sequence = GlobalSequenceId::ZERO;
         for event in new_events {
             last_sequence = event.global_sequence;
             Self::apply_event(&def, &event, &mut state)?;
