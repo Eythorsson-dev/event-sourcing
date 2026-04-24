@@ -3,13 +3,14 @@
 //! These tests verify that the macro parses the Phase 4 DSL syntax correctly
 //! and emits a `#[derive(Deserialize)]` struct and `impl ReadModel`.
 //!
-//! Run with: cargo test -p event-sourcing --features macros --test projection_tests
+//! Run with: cargo test -p event-sourcing --test projection_tests
 
 use event_sourcing::query::TagFilter;
 use event_sourcing::{
-    projection, FieldSpec, HandlerSpec, ObjectFieldSpecBuilder, ProjectionDefinition, ReadModel,
+    FieldSpec, HandlerSpec, ObjectFieldSpecBuilder, ProjectionDefinition, ReadModel,
     ScalarFieldSpecBuilder,
 };
+use event_sourcing_macros::projection;
 
 // ── Test 1: Basic struct generation ─────────────────────────────────────────
 

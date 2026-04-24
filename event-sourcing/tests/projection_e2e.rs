@@ -1,8 +1,9 @@
 //! End-to-end integration test: `projection!` → `ProjectionEngine::project` → typed result.
 //!
-//! Run with: cargo test -p event-sourcing --features macros --test projection_e2e
+//! Run with: cargo test -p event-sourcing --test projection_e2e
 
-use event_sourcing::{projection, EventType, GlobalSequenceId, ProjectionEngine, StoredEvent};
+use event_sourcing::{EventType, GlobalSequenceId, ProjectionEngine, StoredEvent};
+use event_sourcing_macros::projection;
 use std::collections::HashSet;
 use std::time::SystemTime;
 
