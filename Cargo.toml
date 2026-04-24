@@ -14,3 +14,5 @@ thiserror = "2.0"
 futures-core = "0.3"
 futures = "0.3"
 tokio = { version = "1", features = ["sync"] }
+indexmap = { version = "2", features = ["serde"] }
+serde_json_path = "0.7"
