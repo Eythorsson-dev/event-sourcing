@@ -122,21 +122,11 @@ impl<S: LogStore, E: EventSchemaStore> EventLog<S, E> {
         &self,
         code_schemas: impl IntoIterator<Item = EventSchemaDef>,
     ) -> Result<(), SchemaConflictError> {
-        let persisted =
-            self.schema_store
-                .fetch_all()
-                .await
-                .map_err(|_e| SchemaConflictError::Conflict {
-                    event_type: EventType::from("unknown"),
-                    expected: EventSchemaDef {
-                        event_type: EventType::from(""),
-                        fields: vec![],
-                    },
-                    actual: EventSchemaDef {
-                        event_type: EventType::from(""),
-                        fields: vec![],
-                    },
-                })?;
+        let persisted = self
+            .schema_store
+            .fetch_all()
+            .await
+            .map_err(|e| SchemaConflictError::StorageFailure(e.to_string()))?;
 
         let persisted_map: std::collections::HashMap<String, EventSchemaDef> = persisted
             .into_iter()
