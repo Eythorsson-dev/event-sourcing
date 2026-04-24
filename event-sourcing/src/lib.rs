@@ -18,8 +18,9 @@ pub use error::{AppendCondition, AppendError, SchemaConflictError, StoreError};
 pub use event::StoredEvent;
 pub use event_log::{EventLog, EventLogError, EventStreamExt, StreamError};
 pub use projection::{
-    FieldSpec, HandlerSpec, ObjectFieldSpec, ObjectFieldSpecBuilder, ProjectionDefinition,
-    ProjectionDefinitionBuilder, ScalarFieldSpec, ScalarFieldSpecBuilder,
+    FieldSpec, HandlerSpec, ObjectFieldSpec, ObjectFieldSpecBuilder, ProjectionCheckpoint,
+    ProjectionDefinition, ProjectionDefinitionBuilder, ProjectionEngine, ProjectionError,
+    ReadModel, ScalarFieldSpec, ScalarFieldSpecBuilder,
 };
 pub use query::{Criterion, Query, TagFilter};
 pub use schema::{Event, EventSchemaDef, FieldDef, FieldType};
