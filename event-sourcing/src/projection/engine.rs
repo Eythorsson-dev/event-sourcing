@@ -109,10 +109,7 @@ impl ProjectionEngine {
         for (field_name, field_spec) in &def.fields {
             match field_spec {
                 FieldSpec::Scalar(scalar) => {
-                    let initial = scalar
-                        .default
-                        .clone()
-                        .unwrap_or(Value::Null);
+                    let initial = scalar.default.clone().unwrap_or(Value::Null);
                     obj.insert(field_name.clone(), initial);
                 }
                 FieldSpec::Object(object) => {
@@ -172,9 +169,7 @@ impl ProjectionEngine {
                                 .as_object_mut()
                                 .expect("state must be an Object")
                                 .entry(field_name.clone())
-                                .or_insert_with(|| {
-                                    Value::Object(Map::new())
-                                });
+                                .or_insert_with(|| Value::Object(Map::new()));
                             // If the parent object was previously cleared (null), rebuild it
                             if nested_obj.is_null() {
                                 *nested_obj = Value::Object(Map::new());
@@ -212,21 +207,19 @@ impl ProjectionEngine {
         event_type: &EventType,
     ) -> Result<(), ProjectionError> {
         match handler {
-            HandlerSpec::From(h) => {
-                match evaluate_path(payload, &h.from) {
-                    Some(v) => *field_val = v,
-                    None => {
-                        if optional {
-                            *field_val = Value::Null;
-                        } else {
-                            return Err(ProjectionError::FieldNotFound {
-                                event_type: event_type.clone(),
-                                path: h.from.clone(),
-                            });
-                        }
+            HandlerSpec::From(h) => match evaluate_path(payload, &h.from) {
+                Some(v) => *field_val = v,
+                None => {
+                    if optional {
+                        *field_val = Value::Null;
+                    } else {
+                        return Err(ProjectionError::FieldNotFound {
+                            event_type: event_type.clone(),
+                            path: h.from.clone(),
+                        });
                     }
                 }
-            }
+            },
             HandlerSpec::Value(h) => {
                 *field_val = h.value.clone();
             }
@@ -310,18 +303,15 @@ mod tests {
     }
 
     fn customer_def() -> ProjectionDefinition {
-        ProjectionDefinition::builder(
-            "CustomerView",
-            TagFilter::StartsWith("customer:".into()),
-        )
-        .scalar(
-            "name",
-            ScalarFieldSpecBuilder::new()
-                .required()
-                .on("CustomerRegistered", HandlerSpec::from_path("$.name"))
-                .build(),
-        )
-        .build()
+        ProjectionDefinition::builder("CustomerView", TagFilter::StartsWith("customer:".into()))
+            .scalar(
+                "name",
+                ScalarFieldSpecBuilder::new()
+                    .required()
+                    .on("CustomerRegistered", HandlerSpec::from_path("$.name"))
+                    .build(),
+            )
+            .build()
     }
 
     // ── Path evaluator (from Task 2, kept here for completeness) ────────────
@@ -384,18 +374,15 @@ mod tests {
 
     #[test]
     fn apply_raw_value_null_clears_field() {
-        let def = ProjectionDefinition::builder(
-            "Test",
-            TagFilter::StartsWith("test:".into()),
-        )
-        .scalar(
-            "accountant",
-            ScalarFieldSpecBuilder::new()
-                .on("AssignAccountant", HandlerSpec::from_path("$.name"))
-                .on("RemoveAccountant", HandlerSpec::value(Value::Null))
-                .build(),
-        )
-        .build();
+        let def = ProjectionDefinition::builder("Test", TagFilter::StartsWith("test:".into()))
+            .scalar(
+                "accountant",
+                ScalarFieldSpecBuilder::new()
+                    .on("AssignAccountant", HandlerSpec::from_path("$.name"))
+                    .on("RemoveAccountant", HandlerSpec::value(Value::Null))
+                    .build(),
+            )
+            .build();
 
         let events = vec![
             make_event("AssignAccountant", json!({"name": "Carol"})),
@@ -407,18 +394,16 @@ mod tests {
 
     #[test]
     fn apply_raw_increment() {
-        let def = ProjectionDefinition::builder(
-            "Counter",
-            TagFilter::StartsWith("counter:".into()),
-        )
-        .scalar(
-            "count",
-            ScalarFieldSpecBuilder::new()
-                .default_value(json!(0.0))
-                .on("Incremented", HandlerSpec::increment(5.0))
-                .build(),
-        )
-        .build();
+        let def =
+            ProjectionDefinition::builder("Counter", TagFilter::StartsWith("counter:".into()))
+                .scalar(
+                    "count",
+                    ScalarFieldSpecBuilder::new()
+                        .default_value(json!(0.0))
+                        .on("Incremented", HandlerSpec::increment(5.0))
+                        .build(),
+                )
+                .build();
 
         let events = vec![
             make_event("Incremented", json!({})),
@@ -507,18 +492,15 @@ mod tests {
 
     #[test]
     fn apply_raw_default_value_used_before_events() {
-        let def = ProjectionDefinition::builder(
-            "Test",
-            TagFilter::StartsWith("test:".into()),
-        )
-        .scalar(
-            "status",
-            ScalarFieldSpecBuilder::new()
-                .default_value(json!("pending"))
-                .on("StatusChanged", HandlerSpec::from_path("$.status"))
-                .build(),
-        )
-        .build();
+        let def = ProjectionDefinition::builder("Test", TagFilter::StartsWith("test:".into()))
+            .scalar(
+                "status",
+                ScalarFieldSpecBuilder::new()
+                    .default_value(json!("pending"))
+                    .on("StatusChanged", HandlerSpec::from_path("$.status"))
+                    .build(),
+            )
+            .build();
 
         // No events — default should be present
         let state = ProjectionEngine::apply_raw(&def, std::iter::empty()).unwrap();
@@ -527,18 +509,18 @@ mod tests {
 
     #[test]
     fn apply_raw_optional_field_absent_yields_null() {
-        let def = ProjectionDefinition::builder(
-            "Test",
-            TagFilter::StartsWith("test:".into()),
-        )
-        .scalar(
-            "middle_name",
-            ScalarFieldSpecBuilder::new()
-                // required = false (default) → optional = true
-                .on("CustomerRegistered", HandlerSpec::from_path("$.middle_name"))
-                .build(),
-        )
-        .build();
+        let def = ProjectionDefinition::builder("Test", TagFilter::StartsWith("test:".into()))
+            .scalar(
+                "middle_name",
+                ScalarFieldSpecBuilder::new()
+                    // required = false (default) → optional = true
+                    .on(
+                        "CustomerRegistered",
+                        HandlerSpec::from_path("$.middle_name"),
+                    )
+                    .build(),
+            )
+            .build();
 
         // Payload has no middle_name — optional field should become null, not error
         let events = vec![make_event("CustomerRegistered", json!({"name": "Alice"}))];
@@ -548,18 +530,15 @@ mod tests {
 
     #[test]
     fn apply_raw_required_field_absent_yields_error() {
-        let def = ProjectionDefinition::builder(
-            "Test",
-            TagFilter::StartsWith("test:".into()),
-        )
-        .scalar(
-            "name",
-            ScalarFieldSpecBuilder::new()
-                .required()
-                .on("CustomerRegistered", HandlerSpec::from_path("$.name"))
-                .build(),
-        )
-        .build();
+        let def = ProjectionDefinition::builder("Test", TagFilter::StartsWith("test:".into()))
+            .scalar(
+                "name",
+                ScalarFieldSpecBuilder::new()
+                    .required()
+                    .on("CustomerRegistered", HandlerSpec::from_path("$.name"))
+                    .build(),
+            )
+            .build();
 
         // Payload has no name — required field → FieldNotFound error
         let events = vec![make_event("CustomerRegistered", json!({"other": "field"}))];
@@ -653,8 +632,7 @@ mod tests {
             make_event_seq("Ticked", json!({}), 2),
             make_event_seq("Ticked", json!({}), 3),
         ];
-        let full_model: CounterModel =
-            ProjectionEngine::project(all_events.into_iter()).unwrap();
+        let full_model: CounterModel = ProjectionEngine::project(all_events.into_iter()).unwrap();
         assert_eq!(model, full_model);
     }
 }
