@@ -5,11 +5,11 @@
 //!
 //! Run with: cargo test -p event-sourcing --features macros --test projection_tests
 
-use event_sourcing::{
-    FieldSpec, HandlerSpec, ObjectFieldSpecBuilder, ProjectionDefinition, ReadModel,
-    ScalarFieldSpecBuilder, projection,
-};
 use event_sourcing::query::TagFilter;
+use event_sourcing::{
+    projection, FieldSpec, HandlerSpec, ObjectFieldSpecBuilder, ProjectionDefinition, ReadModel,
+    ScalarFieldSpecBuilder,
+};
 
 // ── Test 1: Basic struct generation ─────────────────────────────────────────
 
@@ -149,7 +149,10 @@ fn projection_macro_definition_matches_builder() {
         "accountant_name",
         ScalarFieldSpecBuilder::new()
             .on("AccountantAssigned", HandlerSpec::from_path("$.name"))
-            .on("AccountantRemoved", HandlerSpec::value(serde_json::Value::Null))
+            .on(
+                "AccountantRemoved",
+                HandlerSpec::value(serde_json::Value::Null),
+            )
             .build(),
     )
     .object(

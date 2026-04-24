@@ -33,7 +33,6 @@ syn::custom_keyword!(cleared_by);
 /// The full input to `projection! { ... }`.
 struct ProjectionInput {
     name: Ident,
-    alias: Ident,
     query: QuerySpec,
     fields: Vec<FieldDecl>,
 }
@@ -138,7 +137,6 @@ impl Parse for ProjectionInput {
 
         Ok(ProjectionInput {
             name,
-            alias,
             query,
             fields,
         })
