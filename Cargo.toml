@@ -4,6 +4,7 @@ members = [
     "event-sourcing-logstore-inmemory",
     "event-sourcing-logstore-sqlite",
     "event-sourcing-commands",
+    "event-sourcing-macros",
 ]
 resolver = "2"
 
@@ -17,3 +18,6 @@ tokio = { version = "1", features = ["sync"] }
 indexmap = { version = "2", features = ["serde"] }
 serde_json_path = "0.7"
 async-trait = "0.1"
+syn = { version = "2", features = ["full"] }
+quote = "1.0"
+proc-macro2 = "1.0"
