@@ -7,13 +7,17 @@ use crate::projection::error::ProjectionError;
 use crate::types::{EventType, GlobalSequenceId};
 
 /// Evaluate an RFC 9535 JSON Path expression against a serde_json::Value payload.
-/// Returns the first matching node, or None if no match.
+/// Returns `Ok(Some(value))` on match, `Ok(None)` if the path is valid but has no match,
+/// or `Err(ProjectionError::InvalidPath)` if the path string cannot be parsed.
 ///
-/// Callers (the builder) guarantee that `path` is a valid JsonPath string —
-/// `unwrap()` here is safe because invalid paths are rejected at definition-build time.
-pub(crate) fn evaluate_path(payload: &Value, path: &str) -> Option<Value> {
-    let compiled = JsonPath::parse(path).ok()?;
-    compiled.query(payload).first().cloned()
+/// Definitions built via the builder have their paths validated at construction time.
+/// This function returns an error rather than silently swallowing parse failures so that
+/// definitions loaded from JSON (which bypass builder validation) fail loudly.
+pub(crate) fn evaluate_path(payload: &Value, path: &str) -> Result<Option<Value>, ProjectionError> {
+    let compiled = JsonPath::parse(path).map_err(|_| ProjectionError::InvalidPath {
+        path: path.to_owned(),
+    })?;
+    Ok(compiled.query(payload).first().cloned())
 }
 
 // ── ReadModel trait ──────────────────────────────────────────────────────────
@@ -209,7 +213,7 @@ impl ProjectionEngine {
         event_type: &EventType,
     ) -> Result<(), ProjectionError> {
         match handler {
-            HandlerSpec::From(h) => match evaluate_path(payload, &h.from) {
+            HandlerSpec::From(h) => match evaluate_path(payload, &h.from)? {
                 Some(v) => *field_val = v,
                 None => {
                     if optional {
@@ -235,7 +239,7 @@ impl ProjectionEngine {
             }
             HandlerSpec::IncrementBy(h) => {
                 let current = Self::as_f64(field_val, field_name)?;
-                let delta = evaluate_path(payload, &h.increment_by)
+                let delta = evaluate_path(payload, &h.increment_by)?
                     .and_then(|v| v.as_f64())
                     .ok_or_else(|| ProjectionError::TypeMismatch {
                         field: field_name.to_owned(),
@@ -245,7 +249,7 @@ impl ProjectionEngine {
             }
             HandlerSpec::DecrementBy(h) => {
                 let current = Self::as_f64(field_val, field_name)?;
-                let delta = evaluate_path(payload, &h.decrement_by)
+                let delta = evaluate_path(payload, &h.decrement_by)?
                     .and_then(|v| v.as_f64())
                     .ok_or_else(|| ProjectionError::TypeMismatch {
                         field: field_name.to_owned(),
@@ -321,28 +325,28 @@ mod tests {
     #[test]
     fn path_simple_field() {
         let payload = json!({"amount": 42});
-        let result = evaluate_path(&payload, "$.amount");
+        let result = evaluate_path(&payload, "$.amount").unwrap();
         assert_eq!(result, Some(json!(42)));
     }
 
     #[test]
     fn path_nested() {
         let payload = json!({"address": {"city": "London"}});
-        let result = evaluate_path(&payload, "$.address.city");
+        let result = evaluate_path(&payload, "$.address.city").unwrap();
         assert_eq!(result, Some(json!("London")));
     }
 
     #[test]
     fn path_missing_field() {
         let payload = json!({"x": 1});
-        let result = evaluate_path(&payload, "$.y");
+        let result = evaluate_path(&payload, "$.y").unwrap();
         assert_eq!(result, None);
     }
 
     #[test]
     fn path_null_value() {
         let payload = json!({"name": null});
-        let result = evaluate_path(&payload, "$.name");
+        let result = evaluate_path(&payload, "$.name").unwrap();
         assert_eq!(result, Some(Value::Null));
     }
 
@@ -350,7 +354,11 @@ mod tests {
     fn path_invalid_expression() {
         let payload = json!({"x": 1});
         let result = evaluate_path(&payload, "not-a-path");
-        assert_eq!(result, None);
+        assert!(
+            matches!(result, Err(ProjectionError::InvalidPath { .. })),
+            "expected InvalidPath error for malformed path, got: {:?}",
+            result
+        );
     }
 
     // ── apply_raw tests ──────────────────────────────────────────────────────
