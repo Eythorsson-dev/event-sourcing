@@ -57,7 +57,10 @@ impl<S: LogStore, E: EventSchemaStore> EventLog<S, E> {
     /// Construct an EventLog wrapping the given store and a custom schema store.
     /// Use `EventLog::new(store)` for the common case where schema tracking is not needed.
     pub fn with_schema_store(store: S, schema_store: E) -> Self {
-        Self { store, schema_store }
+        Self {
+            store,
+            schema_store,
+        }
     }
 
     /// Append events with an optional concurrency check.
@@ -119,21 +122,21 @@ impl<S: LogStore, E: EventSchemaStore> EventLog<S, E> {
         &self,
         code_schemas: impl IntoIterator<Item = EventSchemaDef>,
     ) -> Result<(), SchemaConflictError> {
-        let persisted = self
-            .schema_store
-            .fetch_all()
-            .await
-            .map_err(|_e| SchemaConflictError::Conflict {
-                event_type: EventType::from("unknown"),
-                expected: EventSchemaDef {
-                    event_type: EventType::from(""),
-                    fields: vec![],
-                },
-                actual: EventSchemaDef {
-                    event_type: EventType::from(""),
-                    fields: vec![],
-                },
-            })?;
+        let persisted =
+            self.schema_store
+                .fetch_all()
+                .await
+                .map_err(|_e| SchemaConflictError::Conflict {
+                    event_type: EventType::from("unknown"),
+                    expected: EventSchemaDef {
+                        event_type: EventType::from(""),
+                        fields: vec![],
+                    },
+                    actual: EventSchemaDef {
+                        event_type: EventType::from(""),
+                        fields: vec![],
+                    },
+                })?;
 
         let persisted_map: std::collections::HashMap<String, EventSchemaDef> = persisted
             .into_iter()

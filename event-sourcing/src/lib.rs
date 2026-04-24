@@ -14,7 +14,7 @@ pub mod store;
 pub mod types;
 
 // Re-export primary public API at crate root for ergonomic imports
-pub use error::{AppendCondition, AppendError, StoreError};
+pub use error::{AppendCondition, AppendError, SchemaConflictError, StoreError};
 pub use event::StoredEvent;
 pub use event_log::{EventLog, EventLogError, EventStreamExt, StreamError};
 pub use projection::{
@@ -23,6 +23,7 @@ pub use projection::{
 };
 pub use query::{Criterion, Query, TagFilter};
 pub use schema::{Event, EventSchemaDef, FieldDef, FieldType};
+pub use schema_store::{EventSchemaError, EventSchemaStore, NoOpEventSchemaStore};
 pub use store::LogStore;
 pub use types::{EventType, GlobalSequenceId, InvalidEventType, InvalidTag, NewEvent, Tag};
 

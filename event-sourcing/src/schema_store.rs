@@ -18,7 +18,8 @@ pub enum EventSchemaError {
 pub trait EventSchemaStore: Send + Sync {
     async fn record_if_new(&self, schema: &EventSchemaDef) -> Result<(), EventSchemaError>;
     async fn fetch_all(&self) -> Result<Vec<EventSchemaDef>, EventSchemaError>;
-    async fn fetch_one(&self, event_type: &str) -> Result<Option<EventSchemaDef>, EventSchemaError>;
+    async fn fetch_one(&self, event_type: &str)
+        -> Result<Option<EventSchemaDef>, EventSchemaError>;
 }
 
 /// No-op implementation used as the default type parameter on EventLog.
