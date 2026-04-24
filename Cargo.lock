@@ -12,6 +12,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-trait"
+version = "0.1.89"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9035ad2d096bed7955a320ee7e2230574d28fd3c3a0f186cbea1ff3c7eed5dbb"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -21,6 +32,7 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 name = "event-sourcing"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "event-sourcing-logstore-inmemory",
  "futures",
  "futures-core",
@@ -43,6 +55,7 @@ dependencies = [
 name = "event-sourcing-logstore-inmemory"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "event-sourcing",
  "futures",
  "serde_json",
