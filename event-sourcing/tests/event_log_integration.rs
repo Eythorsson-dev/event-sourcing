@@ -425,7 +425,10 @@ async fn validate_schemas_ok_when_schemas_match() {
 
     let log = EventLog::with_schema_store(InMemoryLogStore::new(), schema_store);
     let result = log
-        .validate_schemas([make_schema("OrderPlaced", vec![field("id"), field("amount")])])
+        .validate_schemas([make_schema(
+            "OrderPlaced",
+            vec![field("id"), field("amount")],
+        )])
         .await;
     assert!(result.is_ok(), "matching schemas should return Ok");
 }

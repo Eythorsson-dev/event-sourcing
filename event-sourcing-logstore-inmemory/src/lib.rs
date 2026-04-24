@@ -180,7 +180,10 @@ impl EventSchemaStore for InMemoryEventSchemaStore {
         Ok(self.schemas.read().await.values().cloned().collect())
     }
 
-    async fn fetch_one(&self, event_type: &str) -> Result<Option<EventSchemaDef>, EventSchemaError> {
+    async fn fetch_one(
+        &self,
+        event_type: &str,
+    ) -> Result<Option<EventSchemaDef>, EventSchemaError> {
         Ok(self.schemas.read().await.get(event_type).cloned())
     }
 }
@@ -878,7 +881,11 @@ mod tests {
 
         // The first schema should persist
         let result = store.fetch_one("OrderPlaced").await.unwrap().unwrap();
-        assert_eq!(result.fields.len(), 1, "first schema (1 field) should persist");
+        assert_eq!(
+            result.fields.len(),
+            1,
+            "first schema (1 field) should persist"
+        );
     }
 
     #[tokio::test]
