@@ -453,5 +453,8 @@ async fn validate_schemas_err_when_schema_differs() {
             assert_eq!(event_type.as_str(), "OrderPlaced");
         }
         Ok(_) => panic!("expected SchemaConflictError::Conflict, got Ok"),
+        Err(SchemaConflictError::StorageFailure(msg)) => {
+            panic!("unexpected storage failure: {}", msg)
+        }
     }
 }
