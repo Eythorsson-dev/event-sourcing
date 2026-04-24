@@ -19,5 +19,6 @@ macros = ["event-sourcing-macros"]
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
 event-sourcing-logstore-inmemory = { path = "../event-sourcing-logstore-inmemory" }
+event-sourcing-macros = { path = "../event-sourcing-macros" }
 futures = "0.3"
 serde_json = { workspace = true }
