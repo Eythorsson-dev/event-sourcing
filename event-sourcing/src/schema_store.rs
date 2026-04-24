@@ -23,6 +23,7 @@ pub trait EventSchemaStore: Send + Sync {
 
 /// No-op implementation used as the default type parameter on EventLog.
 /// All operations are no-ops — schema tracking is disabled.
+#[derive(Debug, Clone, Copy, Default)]
 pub struct NoOpEventSchemaStore;
 
 #[async_trait]
