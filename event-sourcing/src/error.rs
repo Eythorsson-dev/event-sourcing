@@ -34,7 +34,8 @@ pub enum AppendError {
 }
 
 /// Error returned by EventLog::validate_schemas() startup check.
-/// Indicates a persisted schema differs from the compiled event schema.
+/// Indicates a persisted schema differs from the compiled event schema,
+/// or that the schema store itself failed during the validation check.
 #[derive(Debug, thiserror::Error)]
 pub enum SchemaConflictError {
     #[error("schema conflict for event type '{event_type}': persisted schema differs from compiled schema")]
@@ -43,6 +44,9 @@ pub enum SchemaConflictError {
         expected: EventSchemaDef,
         actual: EventSchemaDef,
     },
+
+    #[error("schema store failure during validation: {0}")]
+    StorageFailure(String),
 }
 
 /// Error from read operations (connection failures, mid-stream errors). Separate from AppendError.
