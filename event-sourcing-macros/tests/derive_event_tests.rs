@@ -23,7 +23,11 @@ fn derive_event_basic_struct() {
     assert_eq!(amount_field.field_type, FieldType::Decimal);
     assert!(!amount_field.optional);
 
-    let item_count_field = schema.fields.iter().find(|f| f.name == "item_count").unwrap();
+    let item_count_field = schema
+        .fields
+        .iter()
+        .find(|f| f.name == "item_count")
+        .unwrap();
     assert_eq!(item_count_field.field_type, FieldType::Integer);
     assert!(!item_count_field.optional);
 }
@@ -71,9 +75,8 @@ fn derive_event_all_supported_types() {
     let schema: EventSchemaDef = AllTypesEvent::schema();
     assert_eq!(schema.fields.len(), 9);
 
-    let get_field = |name: &str| -> &FieldDef {
-        schema.fields.iter().find(|f| f.name == name).unwrap()
-    };
+    let get_field =
+        |name: &str| -> &FieldDef { schema.fields.iter().find(|f| f.name == name).unwrap() };
 
     assert_eq!(get_field("str_field").field_type, FieldType::String);
     assert_eq!(get_field("int8_field").field_type, FieldType::Integer);
