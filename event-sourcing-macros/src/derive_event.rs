@@ -76,7 +76,12 @@ fn map_rust_type_to_field_type(
             quote! { event_sourcing::FieldType::Integer }
         }
         "f32" | "f64" => quote! { event_sourcing::FieldType::Decimal },
-        "bool" => quote! { event_sourcing::FieldType::String },
+        "bool" => {
+            return Err(Error::new_spanned(
+                span_target,
+                "#[derive(Event)] does not support `bool` fields. Use `String` (\"true\"/\"false\") or a newtype instead.",
+            ))
+        }
         "chrono::NaiveDate" => quote! { event_sourcing::FieldType::Date },
         "chrono::DateTime" | "chrono::DateTime<chrono::Utc>" | "DateTime<Utc>" => {
             quote! { event_sourcing::FieldType::DateTime }
