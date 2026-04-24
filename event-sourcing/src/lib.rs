@@ -6,6 +6,7 @@
 pub mod error;
 pub mod event;
 pub mod event_log;
+pub mod projection;
 pub mod query;
 pub mod schema;
 pub mod store;
