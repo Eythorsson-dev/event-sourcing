@@ -153,6 +153,16 @@ Plans:
   5. A read with catch-up disabled returns immediately with whatever state the projection holds, without blocking
 **Plans**: TBD
 
+### Phase 05.1: ESQL macro refactor: introduce eql!() for ad-hoc event queries and refactor projection!() to support live/async/inline projection modes with select/from syntax (INSERTED)
+
+**Goal:** [Urgent work - to be planned]
+**Requirements**: TBD
+**Depends on:** Phase 5
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 05.1 to break down)
+
 ### Phase 6: Constraint Validation
 **Goal**: A caller can attach invariant checks to an event stream so that every append is validated against a projection result before the write commits — including invariants that span multiple streams
 **Depends on**: Phase 5
