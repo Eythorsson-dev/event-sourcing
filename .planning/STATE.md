@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: ready_to_plan
-last_updated: "2026-04-24T18:30:30.549Z"
+status: ready_to_execute
+last_updated: "2026-04-24T22:00:00.000Z"
 last_activity: 2026-04-24
 progress:
   total_phases: 17
   completed_phases: 6
-  total_plans: 14
+  total_plans: 16
   completed_plans: 9
   percent: 35
 ---
@@ -35,9 +35,9 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 | Field | Value |
 |-------|-------|
 | Phase | 4.1 |
-| Phase Name | Projection Engine — List Fields |
+| Phase Name | projection! Macro Syntax Revision |
 | Plan | Not started |
-| Status | Ready to plan |
+| Status | Ready to execute |
 | Milestone | v1 |
 
 **Progress:**
