@@ -75,6 +75,7 @@ Plan: Not started
 - Phase 11 added: Update readme
 - Phase 12 added: Getting started docs + deploy to crates.io
 - Phase 13 added: GDPR and value obfuscation
+- Phase 5.1 inserted after Phase 5: ESQL macro refactor — eql!() for ad-hoc queries, projection!() refactored to live/async/inline modes with select/from syntax
 
 ### Blockers
 
