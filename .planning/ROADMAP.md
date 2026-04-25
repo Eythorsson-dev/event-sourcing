@@ -15,7 +15,7 @@
 - [ ] **Phase 03.1: DCB Model Revision** - Tag-based event classification replacing stream identity
 - [x] **Phase 03.2: TagFilter** - Expressive tag scoping for projection definitions and append conditions (completed 2026-04-12)
 - [ ] **Phase 4: Projection Engine — Single-Stream (Scalars and Nested Objects)** - Single-stream projection fold with scalar fields and nested objects, JSON-serializable ProjectionDefinition, and builder API
-- [ ] **Phase 4.1: projection! Macro Syntax Revision** - Cleaner DSL syntax: remove inner `projection` keyword, comma separators, unified `:` for object fields, compile-time `cleared_by` enforcement on nullable fields
+- [x] **Phase 4.1: projection! Macro Syntax Revision** - Cleaner DSL syntax: remove inner `projection` keyword, comma separators, unified `:` for object fields, compile-time `cleared_by` enforcement on nullable fields (completed 2026-04-24)
 - [ ] **Phase 4.2: Projection Engine — List Fields** - Keyed list collections with mutation and removal semantics (discuss before planning)
 - [ ] **Phase 5: Projection Engine — Multi-Stream and Catch-Up** - Multi-stream joins, unified engine for read models and constraints, and inline catch-up reads
 - [ ] **Phase 6: Constraint Validation** - Constraint types wired into the append cycle, single-stream and multi-stream invariants
@@ -128,8 +128,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04.1-01-PLAN.md — Revise ProjectionInput::parse and parse_field_decl: remove inner keyword, unified `:` for objects, comma separators, cleared_by enforcement
-- [ ] 04.1-02-PLAN.md — Migrate projection_tests.rs and projection_e2e.rs to Phase 4.1 syntax; full workspace test suite passes
+- [x] 04.1-01-PLAN.md — Revise ProjectionInput::parse and parse_field_decl: remove inner keyword, unified `:` for objects, comma separators, cleared_by enforcement
+- [x] 04.1-02-PLAN.md — Migrate projection_tests.rs and projection_e2e.rs to Phase 4.1 syntax; full workspace test suite passes
 
 ### Phase 4.2: Projection Engine — List Fields (INSERTED)
 **Goal**: A caller can declare list fields in a projection that collect, update, and remove items from a keyed collection — extending the Phase 4 scalar/object engine with list mutation semantics
