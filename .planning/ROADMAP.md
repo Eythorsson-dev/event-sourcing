@@ -125,10 +125,11 @@ Plans:
   3. Object fields use `field: { ... }` (non-nullable) and `field?: { ... }` (nullable) — consistent with scalar field syntax
   4. `cleared_by` on a non-nullable object field produces a `Error::new_spanned` compile error before any Rust compilation
   5. All existing e2e and projection macro tests pass with the new syntax; old syntax no longer compiles
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 4.1 to break down)
+- [ ] 04.1-01-PLAN.md — Revise ProjectionInput::parse and parse_field_decl: remove inner keyword, unified `:` for objects, comma separators, cleared_by enforcement
+- [ ] 04.1-02-PLAN.md — Migrate projection_tests.rs and projection_e2e.rs to Phase 4.1 syntax; full workspace test suite passes
 
 ### Phase 4.2: Projection Engine — List Fields (INSERTED)
 **Goal**: A caller can declare list fields in a projection that collect, update, and remove items from a keyed collection — extending the Phase 4 scalar/object engine with list mutation semantics
