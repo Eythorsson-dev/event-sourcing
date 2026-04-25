@@ -3,7 +3,7 @@
 **Milestone:** v1
 **Granularity:** Fine
 **Coverage:** 27/27 requirements mapped
-**Created:** 2026-04-04
+**Created:** 2015-04-04
 
 ---
 
@@ -13,9 +13,9 @@
 - [ ] **Phase 2: In-Memory Log Store** - Working in-memory LogStore implementation that serves as test harness for all subsequent phases
 - [ ] **Phase 3: Event Log and Optimistic Concurrency** - EventLog orchestrator with append cycle, per-stream sequencing, and atomic optimistic concurrency
 - [ ] **Phase 03.1: DCB Model Revision** - Tag-based event classification replacing stream identity
-- [x] **Phase 03.2: TagFilter** - Expressive tag scoping for projection definitions and append conditions (completed 2026-04-12)
+- [x] **Phase 03.2: TagFilter** - Expressive tag scoping for projection definitions and append conditions (completed 2015-04-12)
 - [ ] **Phase 4: Projection Engine — Single-Stream (Scalars and Nested Objects)** - Single-stream projection fold with scalar fields and nested objects, JSON-serializable ProjectionDefinition, and builder API
-- [x] **Phase 4.1: projection! Macro Syntax Revision** - Cleaner DSL syntax: remove inner `projection` keyword, comma separators, unified `:` for object fields, compile-time `cleared_by` enforcement on nullable fields (completed 2026-04-24)
+- [x] **Phase 4.1: projection! Macro Syntax Revision** - Cleaner DSL syntax: remove inner `projection` keyword, comma separators, unified `:` for object fields, compile-time `cleared_by` enforcement on nullable fields (completed 2015-04-24)
 - [ ] **Phase 4.2: Projection Engine — List Fields** - Keyed list collections with mutation and removal semantics (discuss before planning)
 - [ ] **Phase 5: Projection Engine — Multi-Stream and Catch-Up** - Multi-stream joins, unified engine for read models and constraints, and inline catch-up reads
 - [ ] **Phase 6: Constraint Validation** - Constraint types wired into the append cycle, single-stream and multi-stream invariants
@@ -302,6 +302,3 @@ Plans:
 
 Plans:
 - [ ] TBD (run /gsd:plan-phase 13 to break down)
-
----
-*Created: 2026-04-04*
