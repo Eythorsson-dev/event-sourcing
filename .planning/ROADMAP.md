@@ -284,6 +284,16 @@ Plans:
 | 8. SQLite Log Store | 0/? | Not started | - |
 | 9. Commands Crate | 0/? | Not started | - |
 
+### Phase 15: How does the user use the application in projection? How will async projections be triggered? On lazy - on query? Using event busses and a processor?
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 14
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 15 to break down)
+
 ---
 
 ## Coverage Map
