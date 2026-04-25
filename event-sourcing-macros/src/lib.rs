@@ -22,11 +22,13 @@ pub fn derive_event(input: TokenStream) -> TokenStream {
 /// ```ignore
 /// use event_sourcing::projection;
 ///
-/// projection! CustomerView {
-///     query tag.starts_with("customer:") as c
+/// projection! {
+///     CustomerView {
+///         query tag.starts_with("customer:") as c
 ///
-///     name:  c.CustomerRegistered.name
-///          | c.CustomerRenamed.name,
+///         name:  c.CustomerRegistered.name
+///              | c.CustomerRenamed.name,
+///     }
 /// }
 /// ```
 #[proc_macro]
