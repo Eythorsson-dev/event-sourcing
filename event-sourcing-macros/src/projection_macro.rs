@@ -89,8 +89,7 @@ enum OperationDecl {
 
 impl Parse for ProjectionInput {
     fn parse(input: ParseStream) -> Result<Self> {
-        // `projection Name { ... }`
-        input.parse::<projection>()?;
+        // `Name { ... }` — the `projection!` macro invocation name IS the keyword
         let name: Ident = input.parse()?;
 
         let body;
@@ -133,6 +132,10 @@ impl Parse for ProjectionInput {
         let mut fields = Vec::new();
         while !body.is_empty() {
             fields.push(parse_field_decl(&body, &alias)?);
+            // Consume optional trailing comma between fields
+            if body.peek(Token![,]) {
+                body.parse::<Token![,]>()?;
+            }
         }
 
         Ok(ProjectionInput {
@@ -161,22 +164,37 @@ fn parse_field_decl(input: &ParseBuffer, alias: &Ident) -> Result<FieldDecl> {
         false
     };
 
-    // Check if this is an object block `{ ... }` or a scalar `:`
+    // Phase 4.1: always parse `:` after name (and optional `?`)
+    // Grammar: name [?] : ({ sub_fields } | handlers)
+    input.parse::<Token![:]>()?;
+
+    // Check if this is an object block `{ ... }` or scalar handlers
     if input.peek(token::Brace) {
-        // Object field: `name? { sub_fields... } [cleared_by alias.Event]`
+        // Object field: `name: { sub_fields } [cleared_by alias.Event]`
+        //           or  `name?: { sub_fields } [cleared_by alias.Event]`
         let sub_body;
         braced!(sub_body in input);
 
         let mut sub_fields = Vec::new();
         while !sub_body.is_empty() {
             sub_fields.push(parse_scalar_field_decl(&sub_body, alias)?);
+            // Consume optional trailing comma between sub-fields
+            if sub_body.peek(Token![,]) {
+                sub_body.parse::<Token![,]>()?;
+            }
         }
 
         // Optional `cleared_by alias.EventType`
         let cleared_by_event = if input.peek(cleared_by) {
+            // Compile-time enforcement: cleared_by only valid on nullable objects
+            if !optional {
+                return Err(Error::new_spanned(
+                    &name,
+                    "cleared_by requires a nullable object field (use `field?: { ... }` instead of `field: { ... }`)",
+                ));
+            }
             input.parse::<cleared_by>()?;
             let cb_alias: Ident = input.parse()?;
-            // Verify alias matches
             if cb_alias != *alias {
                 return Err(Error::new_spanned(
                     &cb_alias,
@@ -201,8 +219,6 @@ fn parse_field_decl(input: &ParseBuffer, alias: &Ident) -> Result<FieldDecl> {
         })
     } else {
         // Scalar field: `name: handler [| handler]*`
-        input.parse::<Token![:]>()?;
-
         let handlers = parse_handlers(input, alias)?;
 
         Ok(FieldDecl::Scalar {

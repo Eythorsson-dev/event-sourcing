@@ -1,6 +1,6 @@
 //! Integration tests for the `projection!` macro.
 //!
-//! These tests verify that the macro parses the Phase 4 DSL syntax correctly
+//! These tests verify that the macro parses the Phase 4.1 DSL syntax correctly
 //! and emits a `#[derive(Deserialize)]` struct and `impl ReadModel`.
 //!
 //! Run with: cargo test -p event-sourcing --test projection_tests
@@ -15,7 +15,7 @@ use event_sourcing_macros::projection;
 // ── Test 1: Basic struct generation ─────────────────────────────────────────
 
 projection! {
-    projection Foo {
+    Foo {
         query tag.starts_with("foo:") as f
 
         name: f.Created.name
@@ -31,11 +31,11 @@ fn projection_macro_generates_struct() {
 // ── Test 2: Optional vs required fields ─────────────────────────────────────
 
 projection! {
-    projection Bar {
+    Bar {
         query tag.starts_with("bar:") as b
 
-        required_name: b.Created.name
-        optional_name?: b.Renamed.name
+        required_name: b.Created.name,
+        optional_name?: b.Renamed.name,
     }
 }
 
@@ -56,13 +56,13 @@ fn projection_macro_optional_field() {
 // ── Test 3: Object field generates companion struct ──────────────────────────
 
 projection! {
-    projection Baz {
+    Baz {
         query tag.starts_with("baz:") as b
 
-        address? {
-            city:        b.Created.city
-            postal_code: b.Created.postal_code
-        }
+        address?: {
+            city:        b.Created.city,
+            postal_code: b.Created.postal_code,
+        },
     }
 }
 
@@ -84,12 +84,12 @@ fn projection_macro_object_field() {
 // ── Test 4: cleared_by on object field ───────────────────────────────────────
 
 projection! {
-    projection Qux {
+    Qux {
         query tag.starts_with("qux:") as q
 
-        address? {
-            city: q.Created.city
-        } cleared_by q.AddressCleared
+        address?: {
+            city: q.Created.city,
+        } cleared_by q.AddressCleared,
     }
 }
 
@@ -112,21 +112,21 @@ fn projection_macro_cleared_by() {
 // ── Test 5: Macro output equals manually built ProjectionDefinition ──────────
 
 projection! {
-    projection CustomerViewMacro {
+    CustomerViewMacro {
         query tag.starts_with("customer:") as c
 
         name:  c.CustomerRegistered.name
-             | c.CustomerRenamed.name
+             | c.CustomerRenamed.name,
 
         accountant_name?:  c.AccountantAssigned.name
-                         | c.AccountantRemoved = null
+                         | c.AccountantRemoved = null,
 
-        address? {
+        address?: {
             city:        c.CustomerRegistered.city
-                       | c.AddressChanged.city
+                       | c.AddressChanged.city,
             postal_code: c.CustomerRegistered.postal_code
-                       | c.AddressChanged.postal_code
-        } cleared_by c.AddressCleared
+                       | c.AddressChanged.postal_code,
+        } cleared_by c.AddressCleared,
     }
 }
 

@@ -10,21 +10,21 @@ use std::time::SystemTime;
 // ── CustomerView projection defined via macro ────────────────────────────────
 
 projection! {
-    projection CustomerView {
+    CustomerView {
         query tag.starts_with("customer:") as c
 
         name:  c.CustomerRegistered.name
-             | c.CustomerRenamed.name
+             | c.CustomerRenamed.name,
 
         accountant_name?:  c.AccountantAssigned.name
-                         | c.AccountantRemoved = null
+                         | c.AccountantRemoved = null,
 
-        address? {
+        address?: {
             city:        c.CustomerRegistered.city
-                       | c.AddressChanged.city
+                       | c.AddressChanged.city,
             postal_code: c.CustomerRegistered.postal_code
-                       | c.AddressChanged.postal_code
-        } cleared_by c.AddressCleared
+                       | c.AddressChanged.postal_code,
+        } cleared_by c.AddressCleared,
     }
 }
 
