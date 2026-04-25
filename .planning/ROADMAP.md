@@ -155,13 +155,71 @@ Plans:
 
 ### Phase 05.1: ESQL macro refactor: introduce eql!() for ad-hoc event queries and refactor projection!() to support live/async/inline projection modes with select/from syntax (INSERTED)
 
-**Goal:** [Urgent work - to be planned]
+**Goal:** Introduce `eql!()` as a first-class macro for ad-hoc event queries without requiring a named projection, and refactor `projection!()` to use ESQL `select/from` syntax with explicit `live`, `async`, and `inline` mode modifiers — unifying the query and projection surfaces under a single grammar.
 **Requirements**: TBD
 **Depends on:** Phase 5
 **Plans:** 0 plans
 
+#### Event Structured Query Language (ESQL)
+
+Similar to SQL, ESQL builds state from events. It allows users to construct complex JSON objects with nested lists — usable for direct ad-hoc queries or as the body of a named projection. Unlike SQL, `select` and `from` order does not matter, and ESQL is read-only.
+
+```rust
+eql!(
+    select {
+        name:  c.CustomerRegistered.name
+        | c.CustomerRenamed.name,
+
+        accountant_name?:  c.AccountantAssigned.name
+        | c.AccountantRemoved = null,
+
+        address?: {
+            city: c.CustomerRegistered.city
+            | c.AddressChanged.city,
+            postal_code: c.CustomerRegistered.postal_code
+            | c.AddressChanged.postal_code,
+        } cleared_by c.AddressCleared,
+    }
+    from tag.starts_with("customer:") as c
+)
+```
+
+#### Projection modes
+
+Projections are named views backed by ESQL. Three modes correspond to relational database view types:
+
+1. **live** — evaluated at query time; no stored state (equivalent to a normal SQL view)
+2. **async** — materialized and updated whenever events are appended; eventually consistent (equivalent to a materialized view). Use `GlobalSequenceId` to force an inline catch-up when immediate consistency is required.
+3. **inline** — catch-up is performed synchronously at read time
+
+```rust
+projection!(
+    [live | async | inline] projection Customer as
+    select {
+        name:  c.CustomerRegistered.name
+        | c.CustomerRenamed.name,
+
+        accountant_name?:  c.AccountantAssigned.name
+        | c.AccountantRemoved = null,
+
+        address?: {
+            city: c.CustomerRegistered.city
+            | c.AddressChanged.city,
+            postal_code: c.CustomerRegistered.postal_code
+            | c.AddressChanged.postal_code,
+        } cleared_by c.AddressCleared,
+    }
+    from tag.starts_with("customer:") as c
+)
+```
+
+#### Open questions (discuss before planning)
+
+- How does the `ProjectionObserver` interact with `async` projections — does it drive materialization, or does the engine handle it internally?
+- How are schema (projection definition) migrations handled when the ESQL body changes after events have already been materialized? This may warrant a separate phase.
+
 Plans:
-- [ ] TBD (run /gsd-plan-phase 05.1 to break down)
+- [ ] TBD (run /gsd-plan-phase 05.1 to break down — resolve open questions first)
 
 ### Phase 6: Constraint Validation
 **Goal**: A caller can attach invariant checks to an event stream so that every append is validated against a projection result before the write commits — including invariants that span multiple streams
