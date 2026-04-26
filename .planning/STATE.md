@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: Phase 04 shipped — PR #19
-last_updated: "2026-04-25T00:00:00.000Z"
-last_activity: 2026-04-25
+status: Phase 4.2 context gathered — absorbed into Phase 5 + Phase 5.1
+last_updated: "2026-04-26T00:00:00.000Z"
+last_activity: 2026-04-26
 progress:
   total_phases: 16
   completed_phases: 6
@@ -15,8 +15,8 @@ progress:
 
 # Project State: Event Sourcing
 
-**Last updated:** 2026-04-24
-**Last activity:** 2026-04-24
+**Last updated:** 2026-04-26
+**Last activity:** 2026-04-26
 
 ---
 
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 **Core Value:** The projection engine is the heart — it powers read models, validates constraints, and enables multi-stream joins, all from a single declarative definition that serializes to JSON.
 
-**Current Focus:** Phase 4.1 — Projection Engine — List Fields
+**Current Focus:** Phase 5 — Multi-Stream Joins + Nested Objects
 
 ---
 
@@ -34,16 +34,15 @@ See: .planning/PROJECT.md (updated 2026-04-24)
 
 | Field | Value |
 |-------|-------|
-| Phase | 4.1 |
-| Phase Name | projection! Macro Syntax Revision |
+| Phase | 5 |
+| Phase Name | Projection Engine — Multi-Stream and Catch-Up |
 | Plan | Not started |
-| Status | Ready to execute |
+| Status | Ready to discuss (JSON join representation must be discussed first) |
 | Milestone | v1 |
 
 **Progress:**
 
-[####################] 100%
-Phase: 4.1
+Phase: 5
 Plan: Not started
 
 ---
@@ -63,19 +62,20 @@ Plan: Not started
 
 ### Research Flags (for planning phases)
 
-- **Phase 4.1 (List Fields):** Open questions on list keys (OQ-DSL-02), mutation model (OQ-DSL-03), and removal semantics (OQ-DSL-01) must be resolved during discussion before success criteria can be defined.
+- **Phase 5 (Multi-Stream Joins):** JSON representation of join mechanism in `ProjectionDefinition` must be discussed before planning. Start Phase 5 discuss-phase with this as the first agenda item. Key design decisions captured in `.planning/phases/04.2-projection-engine-list-fields-inserted/04.2-CONTEXT.md`.
 - **Phase 7 (Observer Infrastructure):** The retry/backoff/dead-letter concurrency model (per-observer async task vs sequential dispatch vs channel-based queue) has multiple valid patterns. Flag for deliberate design during Phase 7 planning.
 
 ### Roadmap Evolution
 
 - Phase 4.1 inserted: projection! macro syntax revision (cleaner DSL — no inner keyword, commas, unified `:` for objects, compile-time cleared_by enforcement)
-- Phase 4.2 inserted: List fields in projections (keyed collections with mutation/removal) — was 4.1
-- Phase 5 dependency updated: now depends on Phase 4.2
+- Phase 4.2 inserted then absorbed: list fields design discussion — scope merged into Phase 5 (joins) and Phase 5.1 (list fields)
+- Phase 5 goal expanded: now includes joins at root + nested object level, join resolution via tags, `removed_by` rename
+- Phase 5.1 inserted: List fields — keyed collections, `field[]:` DSL, tag-based keys, `removed_by` removal
+- Phase 5.2 inserted: ESQL macro refactor (was Phase 5.1, moved after list fields per 2026-04-26 session)
 - Phase 10 added: Examples directory
 - Phase 11 added: Update readme
 - Phase 12 added: Getting started docs + deploy to crates.io
 - Phase 13 added: GDPR and value obfuscation
-- Phase 5.1 inserted after Phase 5: ESQL macro refactor — eql!() for ad-hoc queries, projection!() refactored to live/async/inline modes with select/from syntax
 - Phase 15 added: Projection usage patterns and async trigger design — lazy/on-query vs event bus vs processor
 
 ### Blockers
@@ -92,13 +92,13 @@ None
 
 ## Session Continuity
 
-Last session: 2026-04-24
-Stopped at: Phase 04 complete (6/6 plans, 139 tests passing, UAT 8/8 passed, security verified), ready to discuss Phase 4.1
-Resume file: None
+Last session: 2026-04-26
+Stopped at: Phase 4.2 context discussion complete — scope absorbed, roadmap restructured. Ready to discuss Phase 5 (JSON join representation is the mandatory first topic).
+Resume file: .planning/phases/04.2-projection-engine-list-fields-inserted/04.2-CONTEXT.md
 
 ### Context Summary
 
-Rust event sourcing library built around the Dynamic Consistency Boundary pattern. Workspace of 5 crates: `event-sourcing` (core), `event-sourcing-logstore-inmemory`, `event-sourcing-logstore-sqlite`, `event-sourcing-commands`, `event-sourcing-macros`. Phase 4 complete: `ProjectionEngine` with full single-stream fold (scalar, object, cleared_by, increment/decrement handlers), JSON-serializable `ProjectionDefinition`, builder API, `projection!` DSL macro, `#[derive(Event)]` proc macro, schema conflict detection via `validate_schemas`. 139 workspace tests passing. Next: Phase 4.1 (list fields with keyed collections) requires discussion before planning.
+Rust event sourcing library built around the Dynamic Consistency Boundary pattern. Workspace of 5 crates: `event-sourcing` (core), `event-sourcing-logstore-inmemory`, `event-sourcing-logstore-sqlite`, `event-sourcing-commands`, `event-sourcing-macros`. Phases 1–4.1 complete: `ProjectionEngine` with full single-stream fold (scalar, object, cleared_by, increment/decrement handlers), `projection!` DSL macro (Phase 4.1 syntax), `#[derive(Event)]`, 139 tests passing. Phase 4.2 was a design discussion — resolved list field and join design decisions, restructured roadmap: Phase 5 (multi-stream joins + nested objects), Phase 5.1 (list fields), Phase 5.2 (ESQL). Next: discuss Phase 5, starting with JSON join representation in `ProjectionDefinition`.
 
 ---
 *State initialized: 2026-04-04*

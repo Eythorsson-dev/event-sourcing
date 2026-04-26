@@ -16,8 +16,10 @@
 - [x] **Phase 03.2: TagFilter** - Expressive tag scoping for projection definitions and append conditions (completed 2015-04-12)
 - [ ] **Phase 4: Projection Engine — Single-Stream (Scalars and Nested Objects)** - Single-stream projection fold with scalar fields and nested objects, JSON-serializable ProjectionDefinition, and builder API
 - [x] **Phase 4.1: projection! Macro Syntax Revision** - Cleaner DSL syntax: remove inner `projection` keyword, comma separators, unified `:` for object fields, compile-time `cleared_by` enforcement on nullable fields (completed 2015-04-24)
-- [ ] **Phase 4.2: Projection Engine — List Fields** - Keyed list collections with mutation and removal semantics (discuss before planning)
-- [ ] **Phase 5: Projection Engine — Multi-Stream and Catch-Up** - Multi-stream joins, unified engine for read models and constraints, and inline catch-up reads
+- [~] **Phase 4.2: Projection Engine — List Fields** - Absorbed into Phase 5 (joins + nested objects) and Phase 5.1 (list fields). See `.planning/phases/04.2-projection-engine-list-fields-inserted/04.2-CONTEXT.md`.
+- [ ] **Phase 5: Projection Engine — Multi-Stream and Catch-Up** - Multi-stream joins (root + nested object), join resolution via tags, inline catch-up reads
+- [ ] **Phase 5.1: Projection Engine — List Fields** - Keyed list collections using Phase 5 join machinery: `field[]:` DSL, tag-based keys, `removed_by` removal, multi-instance isolation tests
+- [ ] **Phase 5.2: ESQL Macro Refactor** - `eql!()` for ad-hoc queries, `projection!()` with live/async/inline modes and select/from syntax
 - [ ] **Phase 6: Constraint Validation** - Constraint types wired into the append cycle, single-stream and multi-stream invariants
 - [ ] **Phase 7: Observer Infrastructure** - Observer trait, three-state result, retry/backoff registry, and built-in ProjectionObserver
 - [ ] **Phase 8: SQLite Log Store** - Production-grade SQLite LogStore implementation with WAL mode and schema migrations
@@ -139,11 +141,11 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] TBD (run /gsd-discuss-phase 4.2 to resolve open questions before planning)
+- [~] Absorbed — see Phase 5 and Phase 5.1 (context: `.planning/phases/04.2-projection-engine-list-fields-inserted/04.2-CONTEXT.md`)
 
 ### Phase 5: Projection Engine — Multi-Stream and Catch-Up
-**Goal**: A caller can join events from multiple streams in a single projection run and read a consistent result gated on a specific global sequence ID — using the same engine as single-stream projections
-**Depends on**: Phase 4.2
+**Goal**: A caller can join events from multiple streams in a single projection — at root level or inside nested objects — and read a consistent result gated on a specific global sequence ID
+**Depends on**: Phase 4.1
 **Requirements**: PROJ-02, PROJ-05, LOG-08
 **Success Criteria** (what must be TRUE):
   1. A `ProjectionDefinition` can declare multiple source streams and `ProjectionEngine` folds their events in global-sequence order
@@ -153,11 +155,22 @@ Plans:
   5. A read with catch-up disabled returns immediately with whatever state the projection holds, without blocking
 **Plans**: TBD
 
-### Phase 05.1: ESQL macro refactor: introduce eql!() for ad-hoc event queries and refactor projection!() to support live/async/inline projection modes with select/from syntax (INSERTED)
+### Phase 05.1: Projection Engine — List Fields (INSERTED)
+
+**Goal:** A caller can declare list fields in a projection that collect, update, and remove items from a keyed collection — using Phase 5's join machinery for tag-based key resolution
+**Requirements**: PROJ-03
+**Depends on:** Phase 5
+**Success Criteria**: TBD — run `/gsd-discuss-phase 5.1` before planning (key decisions captured in `.planning/phases/04.2-projection-engine-list-fields-inserted/04.2-CONTEXT.md`)
+**Plans**: TBD
+
+Plans:
+- [ ] TBD (run /gsd-discuss-phase 5.1 — JSON join representation must be discussed in Phase 5 context first)
+
+### Phase 05.2: ESQL macro refactor: introduce eql!() for ad-hoc event queries and refactor projection!() to support live/async/inline projection modes with select/from syntax (INSERTED)
 
 **Goal:** Introduce `eql!()` as a first-class macro for ad-hoc event queries without requiring a named projection, and refactor `projection!()` to use ESQL `select/from` syntax with explicit `live`, `async`, and `inline` mode modifiers — unifying the query and projection surfaces under a single grammar.
 **Requirements**: TBD
-**Depends on:** Phase 5
+**Depends on:** Phase 5.1
 **Plans:** 0 plans
 
 #### Event Structured Query Language (ESQL)
