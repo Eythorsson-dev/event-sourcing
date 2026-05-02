@@ -2,21 +2,23 @@
 
 **Gathered:** 2026-04-09
 **Updated:** 2026-04-26
-**Status:** Partial — join design settled in 2026-04-26 session. Catch-up reads and multi-stream fetch API still need discussion before planning.
+**Status:** Ready for planning
 
 <domain>
 ## Phase Boundary
 
-Extend the projection engine with multi-stream joins at root level and nested object level, and inline catch-up reads. The single-stream engine from Phase 4 is the foundation.
+Extend the projection engine with multi-stream joins at root level and nested object level. The single-stream engine from Phase 4 is the foundation.
 
 Phase 5 scope:
 - `join` blocks at root level and inside object field blocks
 - Tag-based join resolution via `on` keyword
 - `removed_by` rename from `cleared_by` (breaking DSL/JSON change — apply before Phase 5.1 to avoid migrating tests twice)
-- Inline catch-up reads (to be discussed)
+- Multi-stream fetch orchestration: `project` (single entity) and `project_all` (all matching stream instances)
+- Cycle detection with explicit tests
 
-Phase 5 **not** in scope (Phase 5.1):
-- List fields (`field[]:` syntax, list-level joins, `removed_by` for list items)
+Phase 5 **not** in scope:
+- List fields (`field[]:` syntax, list-level joins, `removed_by` for list items) — Phase 5.1
+- Inline catch-up reads (LOG-08) — deferred to its own phase; not needed for MVP
 
 **Depends on:** Phase 4.1 (projection! macro syntax revision, current DSL baseline)
 
@@ -170,19 +172,89 @@ Phase 5 **not** in scope (Phase 5.1):
 ### Multi-Stream Event Ordering
 
 - **D-23:** Events from all streams (primary + all resolved join instances) are merged and processed in `GlobalSequenceId` order.
-- **D-24:** The same `ProjectionEngine` handles both read-model queries and constraint checks (PROJ-05).
+- **D-24:** The same engine handles both read-model queries and constraint checks (PROJ-05).
+
+### Engine API: Free Functions, Not a Struct
+
+- **D-25:** `ProjectionEngine` unit struct is **replaced with free functions** in the `projection` module. A unit struct with only associated functions is just a namespace — a module serves that purpose without the pretense of instantiation.
+
+- **D-26:** Phase 5 builds an **on-demand query engine** — compute a read model from the event log and return it. No persistence. The "projection engine" (persistent, incrementally maintained materialized views) is Phase 7 (Observer Infrastructure), which layers on top.
+
+### Pure Fold Core
+
+- **D-27:** The inner fold is a **pure function**:
+  ```rust
+  fn fold(def: &ProjectionDefinition, events: impl Iterator<Item = StoredEvent>, join_keys: &JoinKeyMap) -> Result<(Value, JoinKeyMap), ProjectionError>
+  ```
+  Takes the current resolved join key map as input (empty on first pass, populated from checkpoint on resume). Returns the updated state and the new join key map discovered during this pass. No IO.
+
+- **D-28:** Events are attributed to streams by **full tag value** (not prefix). For each event, the fold checks its tags against:
+  - The primary stream instance tag → bare handler (`CustomerRegistered`)
+  - Each resolved join instance tag → prefixed handler (`co.CompanyRegistered`)
+  
+  Cross-type joins are valid and handled by this mechanism. Example: `customer:abc` projecting with a join that resolves to `customer:def` — both are in the iterator, attributed by their specific tag values.
+
+- **D-29:** If joined stream events are absent from the iterator (orchestration did not fetch them), the fold silently produces `null` / default values for those fields. No error. The orchestration layer is responsible for providing a complete event set; the fold does not validate completeness.
+
+### Orchestration: Multi-Pass Fetch-Fold Loop
+
+- **D-30:** The multi-pass orchestration loop:
+  1. Fetch primary stream events from `LogStore`.
+  2. Call `fold` with the current join key map (initially empty). Discover join keys.
+  3. If join keys changed: fetch events for each newly resolved (or changed) join instance. Merge all streams by `GlobalSequenceId`. Call `fold` again with the updated key map.
+  4. Repeat until the join key map stabilises across two consecutive passes.
+  5. Cycle detection (D-19) runs between passes — if the same join key snapshot recurs, return `ProjectionError::CircularJoinDependency`.
+
+- **D-31:** `&dyn LogStore` is injected into the orchestration functions (`project`, `project_all`). The pure `fold` function has no `LogStore` dependency.
+
+- **D-32:** Fetching joined streams is **selective by stream instance** — the engine fetches all events for the specific resolved tag value (e.g., all events tagged `company:123`), not filtered by event type. The fold discards irrelevant event types silently (existing D-22 behaviour). Pre-filtering by event type at the `LogStore` level is not required and would add unnecessary API surface.
+
+### Public API: `project` and `project_all`
+
+- **D-33:** Two public orchestration entry points, sharing a single `fold` core — no logic duplication:
+
+  ```rust
+  // Single entity: caller knows the specific stream instance
+  pub async fn project<M: ReadModel>(
+      store: &dyn LogStore,
+      stream_tag: &str,
+      checkpoint: Option<ProjectionCheckpoint>,
+  ) -> Result<(M, ProjectionCheckpoint), ProjectionError>
+
+  // All matching entities: engine groups by stream instance
+  pub async fn project_all<M: ReadModel>(
+      store: &dyn LogStore,
+      checkpoint: Option<MultiCheckpoint>,
+  ) -> Result<Vec<(M, ProjectionCheckpoint)>, ProjectionError>
+  ```
+
+  `project_all` lists all distinct stream instances matching the definition's root query, then calls `project` per instance. All join resolution runs independently per instance.
+
+- **D-34:** The `ProjectionCheckpoint` struct is extended to include the **resolved join key map** alongside `raw_state` and `last_sequence`:
+  - `raw_state: Value` — fold state
+  - `last_sequence: GlobalSequenceId` — ceiling for this checkpoint
+  - `join_keys: JoinKeyMap` — alias → resolved stream tag at checkpoint time
+  
+  On resume: if any join key differs from the checkpoint, a full replay is triggered for that entity. If keys are stable, incremental fold from `last_sequence` is used.
+
+### Cycle Detection Tests
+
+- **D-35:** Two explicit tests are required in `engine.rs` (or the orchestration module):
+  - **"It fires"** — construct a definition where alias A's key is set by an event in alias B and alias B's key is set by an event in alias A. Feed events that flip both keys on each pass. Assert `ProjectionError::CircularJoinDependency` is returned with a trace showing the oscillation.
+  - **"It's needed"** — same scenario, instrumented. Show that without the detection check, the pass counter increments on each pass with keys oscillating. Proves the check is load-bearing, not defensive.
 
 ### Catch-Up Reads
 
-**To be discussed:** Inline catch-up semantics, `project_from` with `ProjectionCheckpoint`, gating on a specific `GlobalSequenceId`, and how the engine coordinates event fetching across multiple streams. Discuss before planning.
+- **D-36:** Inline catch-up reads (LOG-08) are **deferred** to a separate phase. Not needed for MVP. Phase 7 (Observer Infrastructure) is the primary consumer of checkpointed projection state; catch-up semantics can be designed there or in a dedicated phase.
 
 ### Claude's Discretion
 
 - Serde representation of `JoinOn` (string vs array in JSON, enum variant shape)
-- Internal representation of the join resolution map during fold
+- Internal representation of `JoinKeyMap` during fold (e.g., `IndexMap<String, String>`)
 - Whether root-level and object-level joins share one code path or have separate implementations
 - Error variant structure for `ProjectionError::CircularJoinDependency`
-- Registration-time validation of `on` event type tag coverage (best-effort static analysis)
+- Registration-time validation of join dependency graph for structural cycles (static analysis at `ProjectionDefinition` load time)
+- Exact shape of `MultiCheckpoint` (map of stream tag → `ProjectionCheckpoint`)
 
 </decisions>
 
@@ -201,7 +273,7 @@ Phase 5 **not** in scope (Phase 5.1):
 - `.planning/todos/pending/rename-cleared_by-to-removed_by.md` — Breaking DSL/JSON change to apply in Phase 5
 
 ### Requirements
-- `.planning/REQUIREMENTS.md` — PROJ-02 (multi-stream joins), PROJ-05 (same engine for read models and constraints), LOG-08 (inline catch-up)
+- `.planning/REQUIREMENTS.md` — PROJ-02 (multi-stream joins), PROJ-05 (same engine for read models and constraints); LOG-08 deferred (D-36)
 
 </canonical_refs>
 
@@ -220,9 +292,9 @@ Phase 5 **not** in scope (Phase 5.1):
 - `#[serde(deny_unknown_fields)]` on all field spec structs for schema safety — preserved by keeping `"events"` wrapper
 
 ### Integration Points
-- Phase 6 (Constraint Validation) uses `ProjectionEngine` to validate invariants before appends — same engine, no changes needed in Phase 6
+- Phase 6 (Constraint Validation) calls `project` / `project_all` free functions to validate invariants before appends — same engine, no structural changes needed in Phase 6
 - Phase 5.1 (List Fields) adds `ListFieldSpec` with `join` inside it, using Phase 5's `JoinSpec` type
-- Phase 7 (Observer Infrastructure) calls `project_from` with a stored checkpoint — catch-up API designed in Phase 5 is consumed here
+- Phase 7 (Observer Infrastructure) calls `project` with a stored `ProjectionCheckpoint` (now includes join keys — D-34)
 
 </code_context>
 
@@ -239,6 +311,7 @@ Phase 5 **not** in scope (Phase 5.1):
 <deferred>
 ## Deferred Ideas
 
+- **Inline catch-up reads (LOG-08):** If projection is behind the requested `GlobalSequenceId`, update inline before returning. Deferred — not needed for MVP.
 - **`on $.field` — payload-field join resolution:** For non-DCB events where the referenced entity ID lives in the payload, not the tags. Deferred — needs its own todo/phase.
 - **`query` → `from` keyword rename:** Open question deferred to Phase 5.2 (ESQL macro refactor). Should `query tag.starts_with("X:") as c` become `from tag.starts_with("X:") as c`? SQL alignment argument; breaking DSL change.
 - **Temporal joins:** Point-in-time join semantics (limit joined stream events to `GlobalSequenceId ≤` the root event that triggered the join). Use case: "product name at the time the item was added." Post-Phase 5.
